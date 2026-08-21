@@ -1,0 +1,3 @@
+-- SingleONE ClickHouse 마이그레이션 placeholder.
+-- 이 단계는 실행환경 구축만을 목적으로 하며,
+-- Performance Fact/Journey Event 등 실제 분석 테이블은 다음 단계에서 추가한다.

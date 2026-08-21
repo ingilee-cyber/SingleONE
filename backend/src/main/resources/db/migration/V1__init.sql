@@ -1,0 +1,4 @@
+-- SingleONE MySQL 마이그레이션 placeholder.
+-- 이 단계는 실행환경 구축(Backend/Frontend/DB 기동)만을 목적으로 하며,
+-- Advertiser/Project/UploadBatch 등 실제 도메인 테이블은 다음 단계(DB Migration 및
+-- Master/Upload 도메인 구축)에서 추가한다.

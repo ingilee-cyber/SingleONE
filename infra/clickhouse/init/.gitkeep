@@ -1,0 +1,2 @@
+이 디렉터리는 ClickHouse 컨테이너 최초 기동 시 실행할 초기화 스크립트(.sql/.sh)를 위해 예약되어 있다.
+현재는 CLICKHOUSE_DB/CLICKHOUSE_USER/CLICKHOUSE_PASSWORD 환경변수만으로 기본 DB/사용자 생성이 충분해 별도 스크립트는 없다.

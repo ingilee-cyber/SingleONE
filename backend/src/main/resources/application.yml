@@ -1,0 +1,55 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: singleone-backend
+
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:singleone}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC
+    username: ${MYSQL_USER:singleone}
+    password: ${MYSQL_PASSWORD:singleone}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+
+  servlet:
+    multipart:
+      # PRD 11.11: 파일당 최대 50MB. 여유를 두어 60MB로 설정하고, 정확한 50MB 한도는
+      # UploadService가 별도로 검증해 사용자에게 명확한 오류 메시지를 준다.
+      max-file-size: 60MB
+      max-request-size: 60MB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+singleone:
+  cors:
+    allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:3000}
+  clickhouse:
+    url: jdbc:ch://${CLICKHOUSE_HOST:localhost}:${CLICKHOUSE_HTTP_PORT:8123}/${CLICKHOUSE_DB:singleone}
+    username: ${CLICKHOUSE_USER:singleone}
+    password: ${CLICKHOUSE_PASSWORD:singleone}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
