@@ -55,3 +55,22 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// PowerShell/터미널이 .env를 자동으로 읽어주지 않아, 이 파일 없이 bootRun을 실행하면
+// application.yml의 기본값(예: MySQL 비밀번호)으로 접속을 시도해 docker-compose 컨테이너의
+// 실제 접속 정보와 어긋나 "Access denied" 오류가 난다. bootRun 실행 시 .env를 직접 읽어
+// 환경변수로 주입해 이 문제를 없앤다.
+tasks.named('bootRun') {
+	def envFile = file('../.env')
+	if (envFile.exists()) {
+		def envVars = [:]
+		envFile.eachLine { line ->
+			line = line.trim()
+			int idx = line.indexOf('=')
+			if (line && !line.startsWith('#') && idx > 0) {
+				envVars[line.substring(0, idx).trim()] = line.substring(idx + 1).trim()
+			}
+		}
+		environment(envVars)
+	}
+}

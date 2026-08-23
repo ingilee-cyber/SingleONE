@@ -96,7 +96,7 @@ class SingleOnePerformanceServiceTest extends AbstractIntegrationTest {
 		}
 		performanceFactStore.insertBatch(rows, batch);
 
-		PeriodComparison comparison = service.calculatePeriodWithPreviousComparison(project.getProjectId(), advertiserId,
+		PeriodComparison comparison = service.calculatePeriodWithPreviousComparison(project.getProjectId(),
 			currentFrom, currentTo);
 
 		assertThat(status(comparison.current(), Media.META)).isEqualTo(IndexStatus.VALID);
@@ -136,7 +136,7 @@ class SingleOnePerformanceServiceTest extends AbstractIntegrationTest {
 
 		LocalDate rangeFrom = LocalDate.of(2026, 5, 8);
 		LocalDate rangeTo = LocalDate.of(2026, 5, 14);
-		List<RollingIndexPoint> points = service.calculateRollingIndex(project.getProjectId(), advertiserId, rangeFrom, rangeTo);
+		List<RollingIndexPoint> points = service.calculateRollingIndex(project.getProjectId(), rangeFrom, rangeTo);
 
 		// window가 5/3(GOOGLE 데이터 없음)을 포함하는 5/8, 5/9는 유효 매체가 1개뿐이라 결과에서 제외된다(AC-16).
 		assertThat(points).extracting(RollingIndexPoint::date)

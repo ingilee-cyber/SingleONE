@@ -61,6 +61,35 @@ class SingleOneIndexCalculatorTest {
 
 		BigDecimal average = averageScore(results);
 		assertThat(average.setScale(6, RoundingMode.HALF_UP)).isEqualByComparingTo("100.000000");
+
+		// Dashboard가 그대로 쓰는 부가 필드(6.3 Breakdown/원본 성과)도 함께 검증한다.
+		MediaIndexResult google = byMedia.get(Media.GOOGLE);
+		assertThat(google.rawTotals().cost()).isEqualByComparingTo("45000000");
+		assertThat(google.rawPerformance().cpa()).isNotNull();
+		BigDecimal weightedSum = google.components().exposureIndex().multiply(new BigDecimal("0.10"))
+			.add(google.components().clickIndex().multiply(new BigDecimal("0.20")))
+			.add(google.components().purchaseIndex().multiply(new BigDecimal("0.35")))
+			.add(google.components().revenueIndex().multiply(new BigDecimal("0.35")));
+		assertThat(weightedSum.setScale(6, RoundingMode.HALF_UP))
+			.isEqualByComparingTo(google.indexScore().setScale(6, RoundingMode.HALF_UP));
+	}
+
+	@Test
+	void aggregateProjectTotalsSumsRawAndSingleOneAcrossMedia() {
+		Map<Media, MediaPerformanceTotals> dataset = goldenDataset();
+		List<MediaIndexResult> results = calculator.calculateIndex(dataset.keySet(), dataset, RATES);
+
+		ProjectTotals totals = calculator.aggregateProjectTotals(results);
+
+		assertThat(totals.impressions()).isEqualByComparingTo("21000000");
+		assertThat(totals.clicks()).isEqualByComparingTo("451000");
+		assertThat(totals.cost()).isEqualByComparingTo("180000000");
+		assertThat(totals.rawPurchases()).isEqualByComparingTo("4260");
+		assertThat(totals.rawRevenue()).isEqualByComparingTo("642000000");
+		assertThat(totals.singleOnePurchases()).isEqualByComparingTo("2783.3");
+		assertThat(totals.singleOneRevenue()).isEqualByComparingTo("419940000");
+		assertThat(totals.rawRoas().setScale(4, RoundingMode.HALF_UP)).isEqualByComparingTo("356.6667");
+		assertThat(totals.singleOneRoas()).isEqualByComparingTo("233.3");
 	}
 
 	// AC-04
@@ -125,7 +154,10 @@ class SingleOneIndexCalculatorTest {
 		MediaIndexResult criteo = findMedia(calculator.calculateIndex(projectMedia, dataset, RATES), Media.CRITEO);
 
 		assertThat(criteo.status()).isEqualTo(IndexStatus.MISSING_REQUIRED_DATA);
+		assertThat(criteo.rawTotals()).isNull();
+		assertThat(criteo.rawPerformance()).isNull();
 		assertThat(criteo.singleOnePerformance()).isNull();
+		assertThat(criteo.components()).isNull();
 		assertThat(criteo.indexScore()).isNull();
 	}
 

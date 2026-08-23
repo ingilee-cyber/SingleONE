@@ -54,6 +54,23 @@ public class SingleOneIndexCalculator {
 		return new SingleOnePerformance(totals.media(), singleOnePurchases, singleOneRevenue, cpa, roas);
 	}
 
+	/** PRD 8.7: 원본(비SingleONE) 효율 참고 지표. computeSingleOnePerformance와 동일한 null 규칙을 원본 값에 적용한다. */
+	public OriginalPerformance computeRawPerformance(MediaPerformanceTotals totals) {
+		BigDecimal cpa;
+		BigDecimal roas;
+		if (totals.cost().signum() == 0) {
+			cpa = null;
+			roas = null;
+		} else if (totals.rawPurchases().signum() == 0) {
+			cpa = null;
+			roas = BigDecimal.ZERO;
+		} else {
+			cpa = totals.cost().divide(totals.rawPurchases(), MC);
+			roas = totals.rawRevenue().divide(totals.cost(), MC).multiply(HUNDRED, MC);
+		}
+		return new OriginalPerformance(cpa, roas);
+	}
+
 	/**
 	 * PRD 8.5/8.6: projectMedia는 프로젝트에 포함된 전체 매체, observed는 그중 기간 내 성과 원본이
 	 * 존재하는 매체만 담는다(없는 매체는 MISSING_REQUIRED_DATA로 분류됨).
@@ -62,6 +79,7 @@ public class SingleOneIndexCalculator {
 			Map<Media, BigDecimal> filterRates) {
 		Map<Media, IndexStatus> status = new EnumMap<>(Media.class);
 		Map<Media, SingleOnePerformance> performanceByMedia = new EnumMap<>(Media.class);
+		Map<Media, OriginalPerformance> rawPerformanceByMedia = new EnumMap<>(Media.class);
 
 		for (Media media : projectMedia) {
 			MediaPerformanceTotals totals = observed.get(media);
@@ -71,6 +89,7 @@ public class SingleOneIndexCalculator {
 			}
 			SingleOnePerformance performance = computeSingleOnePerformance(totals, filterRates.get(media));
 			performanceByMedia.put(media, performance);
+			rawPerformanceByMedia.put(media, computeRawPerformance(totals));
 			boolean meetsMinimum = totals.operatingDays() >= MIN_OPERATING_DAYS
 				&& totals.cost().compareTo(MIN_COST) >= 0
 				&& performance.singleOnePurchases().compareTo(MIN_PURCHASES) >= 0;
@@ -88,7 +107,7 @@ public class SingleOneIndexCalculator {
 			for (Media media : tentativelyValid) {
 				status.put(media, IndexStatus.COMPARISON_MEDIA_INSUFFICIENT);
 			}
-			return buildResults(projectMedia, status, performanceByMedia, Map.of());
+			return buildResults(projectMedia, status, observed, rawPerformanceByMedia, performanceByMedia, Map.of(), Map.of());
 		}
 
 		Map<Media, BigDecimal> exposureEff = new EnumMap<>(Media.class);
@@ -112,6 +131,7 @@ public class SingleOneIndexCalculator {
 		BigDecimal meanRevenue = mean(revenueEff.values());
 
 		Map<Media, BigDecimal> scores = new EnumMap<>(Media.class);
+		Map<Media, IndexComponents> componentsByMedia = new EnumMap<>(Media.class);
 		for (Media media : tentativelyValid) {
 			BigDecimal exposureIdx = exposureEff.get(media).divide(meanExposure, MC).multiply(HUNDRED, MC);
 			BigDecimal clickIdx = clickEff.get(media).divide(meanClick, MC).multiply(HUNDRED, MC);
@@ -122,9 +142,44 @@ public class SingleOneIndexCalculator {
 				.add(purchaseIdx.multiply(WEIGHT_PURCHASE, MC))
 				.add(revenueIdx.multiply(WEIGHT_REVENUE, MC));
 			scores.put(media, score);
+			componentsByMedia.put(media, new IndexComponents(exposureIdx, clickIdx, purchaseIdx, revenueIdx));
 		}
 
-		return buildResults(projectMedia, status, performanceByMedia, scores);
+		return buildResults(projectMedia, status, observed, rawPerformanceByMedia, performanceByMedia, componentsByMedia, scores);
+	}
+
+	/**
+	 * PRD 6.2 Dashboard KPI 카드용 프로젝트 전체 합계. 매체별로 이미 계산된 값을 더하기만 한다
+	 * (rawTotals가 없는 MISSING_REQUIRED_DATA 매체는 0으로 간주해 제외). ROAS만 합계 기준으로
+	 * 재도출한다(개별 매체 ROAS의 평균이 아니라 합계 revenue/합계 cost).
+	 */
+	public ProjectTotals aggregateProjectTotals(List<MediaIndexResult> results) {
+		BigDecimal impressions = BigDecimal.ZERO;
+		BigDecimal clicks = BigDecimal.ZERO;
+		BigDecimal cost = BigDecimal.ZERO;
+		BigDecimal rawPurchases = BigDecimal.ZERO;
+		BigDecimal rawRevenue = BigDecimal.ZERO;
+		BigDecimal singleOnePurchases = BigDecimal.ZERO;
+		BigDecimal singleOneRevenue = BigDecimal.ZERO;
+
+		for (MediaIndexResult result : results) {
+			if (result.rawTotals() == null) {
+				continue;
+			}
+			impressions = impressions.add(result.rawTotals().impressions());
+			clicks = clicks.add(result.rawTotals().clicks());
+			cost = cost.add(result.rawTotals().cost());
+			rawPurchases = rawPurchases.add(result.rawTotals().rawPurchases());
+			rawRevenue = rawRevenue.add(result.rawTotals().rawRevenue());
+			singleOnePurchases = singleOnePurchases.add(result.singleOnePerformance().singleOnePurchases());
+			singleOneRevenue = singleOneRevenue.add(result.singleOnePerformance().singleOneRevenue());
+		}
+
+		BigDecimal rawRoas = cost.signum() == 0 ? null : rawRevenue.divide(cost, MC).multiply(HUNDRED, MC);
+		BigDecimal singleOneRoas = cost.signum() == 0 ? null : singleOneRevenue.divide(cost, MC).multiply(HUNDRED, MC);
+
+		return new ProjectTotals(impressions, clicks, cost, rawPurchases, rawRevenue, rawRoas,
+			singleOnePurchases, singleOneRevenue, singleOneRoas);
 	}
 
 	/**
@@ -175,10 +230,13 @@ public class SingleOneIndexCalculator {
 	}
 
 	private List<MediaIndexResult> buildResults(Set<Media> projectMedia, Map<Media, IndexStatus> status,
-			Map<Media, SingleOnePerformance> performanceByMedia, Map<Media, BigDecimal> scores) {
+			Map<Media, MediaPerformanceTotals> observed, Map<Media, OriginalPerformance> rawPerformanceByMedia,
+			Map<Media, SingleOnePerformance> performanceByMedia, Map<Media, IndexComponents> componentsByMedia,
+			Map<Media, BigDecimal> scores) {
 		List<MediaIndexResult> results = new ArrayList<>();
 		for (Media media : projectMedia) {
-			results.add(new MediaIndexResult(media, status.get(media), performanceByMedia.get(media), scores.get(media)));
+			results.add(new MediaIndexResult(media, status.get(media), observed.get(media), rawPerformanceByMedia.get(media),
+				performanceByMedia.get(media), componentsByMedia.get(media), scores.get(media)));
 		}
 		return results;
 	}

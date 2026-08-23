@@ -110,13 +110,42 @@
 
 ## 4. 프로젝트(Project) CRUD 및 캠페인 Selection
 
-- 상태: 미착수
-- 테스트 결과: 미실행
+- 상태: 완료
+- 생성물:
+  - Backend `backend/src/main/java/com/singleone/backend/project/`: `ProjectService`(생성/수정/삭제, 검증 규칙, "전체 캠페인" 시스템 기본 프로젝트 관리), `ProjectController`(REST API 5종), `ProjectRequestException`/`ProjectExceptionHandler`(`UploadRequestException` 패턴 재사용), DTO(`ProjectResponse`/`ProjectUpsertRequest`/`CampaignSelection`/`CampaignOptionResponse`).
+  - REST API: `GET/POST /api/v1/advertisers/{advertiserId}/projects`(검색/정렬/페이지네이션 기본 50·최대 200), `PUT/DELETE /api/v1/projects/{projectId}`, `GET /api/v1/advertisers/{advertiserId}/campaigns`(PRD 5.3 캠페인명/ID 검색+매체 필터, 프로젝트 생성/수정용).
+  - "전체 캠페인" 시스템 기본 프로젝트(PRD 5.2)는 `project` 테이블에 광고주당 1행만 저장하고(첫 프로젝트 목록 조회 시 자동 생성), 포함 캠페인은 저장하지 않고 그 광고주의 `campaign_master` 전체를 항상 동적으로 계산한다. 새 캠페인이 업로드되면 별도 동기화 없이 자동으로 포함된다.
+  - Stage 3 `SingleOnePerformanceService`가 `ProjectCampaignRepository`를 직접 쓰던 것을 `ProjectService.resolveIncludedCampaigns`로 교체해, 전체 캠페인 프로젝트도 Index 계산에 사용할 수 있도록 연동함.
+  - MySQL Flyway `V7`: `project_campaign`의 FK를 `ON DELETE CASCADE`로 변경(프로젝트 삭제 시 하위 캠페인 선택 행도 함께 삭제).
+  - Frontend `frontend/app/projects/page.tsx`(+`frontend/lib/projectApi.ts`): 프로젝트 목록(매체 Chip, 캠페인 수, 시스템 기본 배지), 생성/수정 공용 Dialog(캠페인 검색+매체 필터+체크박스 선택, 선택 매체 수 실시간 표시로 최소 2개 조건을 저장 전에 안내), 삭제 확인 Dialog. 홈 화면에 `/projects` 링크 추가.
+- 테스트 결과:
+  - Backend `ProjectServiceTest`(Testcontainers)는 이 PC의 Docker Desktop 비호환으로 자동 실행 불가(기존 단계와 동일 증상). 대신 `bootRun` + curl로 전체 시나리오를 직접 재현해 통과 확인: 전체 캠페인 프로젝트 자동 생성 및 동적 캠페인 포함, 정상 생성, 이름 중복 거부, 매체 1개만 선택 시 거부(AC-17), 존재하지 않는 캠페인 거부, 이름 중복 재확인, 수정 시 project_id 유지하며 캠페인 전체 교체, 시스템 기본 프로젝트 수정/삭제 거부(AC-21), 일반 프로젝트 삭제 시 하위 project_campaign 함께 삭제(V7 마이그레이션 확인), 페이지 크기 300 요청 시 200으로 clamp. 캠페인 재사용(AC-19)은 서로 다른 project_id로 각각 정상 생성됨을 확인. `resolveIncludedCampaigns`가 전체 캠페인 프로젝트에 대해 실제 캠페인 3개를 정확히 반환함도 임시 CommandLineRunner(검증 후 삭제)로 확인.
+  - 기존 회귀 테스트(`common.time`, `upload.*`, `migration.clickhouse`, `analytics.SingleOneIndexCalculatorTest`) 전부 재실행해 통과 확인.
+  - Frontend: `npm test`(신규 4개 포함 총 9개) 통과, `npm run build`(타입체크 포함), `npm run lint` 통과. 실제 Backend/Frontend를 띄운 상태에서 브라우저(Playwright 스크립트, 커밋 대상 아님)로 전체 캠페인 프로젝트 확인 → 새 프로젝트 생성(매체 2개 미만 시 저장 버튼 비활성화 확인) → 수정 → 삭제 확인 모달 → 삭제까지 골든 패스를 직접 확인함.
+- 진행 중 발견해 고친 사소한 문제 1건: "새 프로젝트" 버튼 텍스트가 줄바꿈되는 스타일 문제를 화면 스크린샷 확인 중 발견해 `whiteSpace: nowrap`으로 수정함.
 
 ## 5. Dashboard
 
-- 상태: 미착수
-- 테스트 결과: 미실행
+- 상태: 완료
+- 생성물:
+  - Backend: Stage 3 `SingleOneIndexCalculator`/`SingleOnePerformanceService`를 그대로 재사용하도록 확장(새 계산 없음, 기존에 구하고 버리던 중간값을 응답에 포함).
+    - `MediaIndexResult`에 `rawTotals`(원본 성과), `rawPerformance`(원본 CPA/ROAS, PRD 8.7), `components`(Index 4개 구성요소 개별 지수, PRD 6.3 Breakdown) 추가.
+    - `SingleOneIndexCalculator.aggregateProjectTotals`: 매체별 값을 합산만 하는 순수 함수(KPI 카드용).
+    - `SingleOnePerformanceService`에서 중복된 `advertiserId` 파라미터 제거(Project 엔티티에서 직접 읽음 — projectId와 advertiserId 불일치 가능성 제거).
+    - 신규 패키지 `com.singleone.backend.dashboard`: `DashboardService`(이전 기간·rolling·합계 조합, Index 점수 내림차순 정렬), `DashboardController`(`GET /api/v1/projects/{projectId}/dashboard?from=&to=`). 존재하지 않는 프로젝트는 기존 `ProjectRequestException`/`ProjectExceptionHandler`(Stage 4)를 재사용해 400 응답.
+  - Frontend `frontend/app/dashboard/`(Material UI + Apache ECharts):
+    - 필터: 광고주 ID, 프로젝트 Select(Stage 4 API), 기간 Quick option 5종(최근 7일/30일/이번 달/지난 달/직접 설정) + 이전 기간 비교 스위치(기본 ON), 광고주 변경 시 프로젝트 재조회 및 무효 선택 해제(PRD 6.1)
+    - `KpiCards`: Cost/Impressions/Clicks(원본만), Purchases/Revenue/ROAS(원본+SingleONE), SingleONE 구매 옆 ⓘ("자체 내부 전환 기준입니다."), show/hide를 localStorage(`singleone.dashboard.kpiVisibility`)에 저장(Drag&Drop 없음), 이전 기간 대비 변화율 표시. 내부 필터율 숫자는 어디에도 없음.
+    - `MediaIndexChart`(Index ⓘ tooltip, PRD 6.4 문구 그대로), `PerformanceTable`(컬럼 정렬), `IndexBreakdownChart`, `RollingIndexChart` — 전부 Backend가 이미 계산한 값을 그대로 표시만 함(Frontend에 계산식 없음).
+    - `JourneySummaryPlaceholder`: 실제 Journey & Attribution 계산 엔진이 아직 없어(사용자 확인) 자리표시자로만 준비.
+    - `/dashboard/media/[media]`: 매체 클릭 시 광고주/프로젝트/기간/이전 기간 비교 상태를 query string으로 넘겨 이동하는 준비용 스텁 라우트(실제 매체 상세는 다음 단계).
+    - Loading/Error/Empty(광고주 미입력, 프로젝트 없음, 캠페인 없음) 상태 처리.
+- 테스트 결과:
+  - `SingleOneIndexCalculatorTest`(Docker 불필요, 항상 자동 실행): Golden Dataset 기반으로 새 필드(rawTotals/rawPerformance/components 가중합=indexScore 일관성) 및 `aggregateProjectTotals` 합계 검증 추가, 전부 통과.
+  - `DashboardServiceTest`/`analytics.SingleOnePerformanceServiceTest`(Testcontainers)는 이 PC Docker 제약으로 자동 실행 불가 — `bootRun`+curl로 Dashboard API 전체 시나리오(정상 응답 필드 전부 확인, 존재하지 않는 프로젝트 400) 수동 검증 완료.
+  - Frontend: `npm test` 15개(신규 6개) 전부 통과, `npm run build`/`npm run lint` 통과. 실제 Backend+Frontend를 띄우고 40일치 성과 데이터로 브라우저에서 골든 패스 전체(프로젝트 자동 선택 → KPI/Index/Breakdown/Rolling 차트 렌더 → 데이터 부족 매체 배지 → 성과 테이블 정렬 → KPI 숨김이 새로고침 후에도 유지 → 매체 클릭 시 컨텍스트가 올바르게 전달되어 스텁 화면 이동)까지 확인.
+  - 기존 회귀 테스트(`common.time`, `upload.*`, `migration.clickhouse`, `analytics.SingleOneIndexCalculatorTest`) 전부 재실행해 통과 확인.
+- 진행 중 발견해 고친 문제 1건: 필터 영역에서 "이전 기간 비교" 스위치 라벨이 좁은 공간에서 세로로 줄바꿈되는 레이아웃 버그를 스크린샷 확인 중 발견해 `whiteSpace: nowrap`으로 수정함.
 
 ## 6. 매체/캠페인/광고 그룹/광고 상세
 
