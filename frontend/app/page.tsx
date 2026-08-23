@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Box, Chip, Container, Stack, Typography } from "@mui/material";
+import { Box, Chip, Container, Link as MuiLink, Stack, Typography } from "@mui/material";
+import NextLink from "next/link";
 import apiClient from "@/lib/apiClient";
 
 type BackendStatus = "checking" | "connected" | "disconnected";
@@ -61,6 +62,9 @@ export default function Home() {
               size="small"
             />
           </Stack>
+          <MuiLink component={NextLink} href="/uploads">
+            데이터 관리 화면으로 이동
+          </MuiLink>
         </Stack>
       </Box>
     </Container>
