@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Box, Button, Card, CardContent, Checkbox, FormControlLabel, Menu, Stack, Tooltip, Typography } from "@mui/material";
 import type { ProjectTotals } from "@/lib/dashboardApi";
+import { fmt as formatNumber, fmtPercent as formatPercent } from "@/lib/format";
 
 type KpiKey = "cost" | "impressions" | "clicks" | "purchases" | "revenue" | "roas";
 
@@ -32,14 +33,6 @@ function loadVisible(): KpiKey[] {
   } catch {
     return KPI_KEYS;
   }
-}
-
-function formatNumber(value: number) {
-  return Math.round(value).toLocaleString("ko-KR");
-}
-
-function formatPercent(value: number | null) {
-  return value === null ? "-" : `${value.toFixed(1)}%`;
 }
 
 function changeLabel(current: number, previous: number | undefined) {

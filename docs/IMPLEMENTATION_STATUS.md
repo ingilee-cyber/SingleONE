@@ -149,8 +149,20 @@
 
 ## 6. 매체/캠페인/광고 그룹/광고 상세
 
-- 상태: 미착수
-- 테스트 결과: 미실행
+- 상태: 완료
+- 생성물:
+  - Backend: `PerformanceAggregationRepository.fetchEntityTotals` 메서드 1개 추가 — 매체(+선택적으로 캠페인/광고그룹/광고까지) 범위의 기간 전체 합계를 (campaign_id, ad_group_id, ad_id) 단위로 반환(기존 `fetchDailyMediaTotals`와 동일한 argMax dedup 패턴 재사용, 하위 레벨은 운영일 개념이 없어 날짜별이 아닌 기간 전체 합산). 이 메서드 하나로 4개 레벨의 "본인 합계"/"하위 목록"을 전부 충당(스코프만 좁혀서 재사용). `AdGroupMasterRepository`/`AdMasterRepository`에 스코프 조회 메서드 각 1개 추가(표시 이름은 기존 Master Upsert의 `latestName` 그대로 사용).
+  - 신규 패키지 `com.singleone.backend.detail`: `EntityPerformance`/`EntityPerformanceComparison`/`MediaDetailResponse`(record) + `DetailService`(검증 후 계산 조합 — Index는 Stage 3/5 계산 결과에서 해당 매체 1개만 추림, 원본/SingleONE 성과는 Stage 3 계산 함수 재사용) + `DetailController`(REST 7개, 계층 URL 그대로: `/api/v1/projects/{projectId}/media/{media}/summary`, `.../campaigns`, `.../campaigns/{campaignId}/summary`, `.../ad-groups`, `.../ad-groups/{adGroupId}/summary`, `.../ads`, `.../ads/{adId}/summary`). 하위 목록 3개는 검색/정렬 대상이 ClickHouse 집계 이후 값이라 Java에서 검색·정렬·페이지 슬라이싱 후 `PageImpl`로 반환(기존 clamp 패턴과 동일하게 기본 50/최대 200).
+  - `SingleOnePerformanceService.getProjectOrThrow`가 `IllegalArgumentException` 대신 기존 `ProjectRequestException`을 던지도록 정리(전역 `ProjectExceptionHandler`로 일관된 400 응답).
+  - Frontend 공용 컴포넌트(`frontend/app/detail/`, 라우트 아님): `Breadcrumb`(단순 렌더링), `PerformanceSummary`(원본 vs SingleONE + ⓘ 툴팁, `previous`/`indexSection` prop으로 계층별 표시 항목만 다르게 — 4개 화면 전부 재사용), `ChildEntityTable`(검색+정렬+페이지네이션을 서버 재조회로 구현하는 범용 목록 — 캠페인/광고그룹/광고 목록 3곳 재사용). `frontend/lib/format.ts`로 숫자/퍼센트 포맷 함수를 뽑아 Dashboard의 기존 `KpiCards`/`PerformanceTable`도 함께 정리(중복 제거).
+  - 라우트(Stage 5 스텁을 실제 구현으로 교체): `/dashboard/media/[media]`(매체 상세 — Index+Breakdown+7일 Rolling+캠페인 목록), `.../campaigns/[campaignId]`(캠페인 상세 — 이전 기간 비교+광고그룹 목록, Index 없음), `.../ad-groups/[adGroupId]`(광고그룹 상세 — 광고 목록만, 이전 기간/Index 없음), `.../ads/[adId]`(광고 상세 — 하위 목록 없음). 모든 라우트가 Dashboard에서 넘어온 advertiserId/projectId/from/to/comparePrevious를 query string으로 계속 이어 붙이고, 추가로 캠페인/광고그룹 이름도 하위 화면으로 전달해 Breadcrumb에 ID 대신 이름이 표시되도록 함.
+- 해석이 필요했던 부분(계획 승인 시 사용자에게 명시): 계층 상세를 하나의 펼침 테이블이 아니라 별도 route로 분리, Index 점수는 매체에만 계산(Hard Rule 8), 최소 조건(PRD 7.6)은 매체 Index 계산에만 적용되고 캠페인/광고그룹/광고 성과 값 자체는 항상 노출.
+- 테스트 결과:
+  - Backend: `SingleOneIndexCalculatorTest` 등 기존 회귀 재실행해 통과. 신규 `DetailServiceTest`(Testcontainers, 6개 시나리오)는 이 PC의 Docker Desktop 비호환(1단계부터 동일한 환경 제약)으로 `./gradlew test` 자동 실행 불가 — `bootRun`+curl로 7개 API 전부 수동 검증: 매체 상세 Index가 Dashboard와 동일한 값 재현, 이전 기간 없을 때 `MISSING_REQUIRED_DATA`, 7일 Rolling 정상, 캠페인/광고그룹/광고 목록의 검색·정렬(`cost,desc` 등)·페이지 크기 300→200 clamp 정상, 캠페인 상세 이전 기간 비교(직전 데이터 없으면 0/null), 프로젝트에 없는 매체·캠페인 요청 시 400 오류. `./gradlew test` 전체 실행 시 9개 실패는 전부 동일한 Testcontainers 환경 제약(신규 실패 없음).
+  - Frontend: `npm test` 전체 통과(신규 `PerformanceSummary`/`ChildEntityTable`/매체 상세 페이지 테스트 포함, 기존 `page.test.tsx`에 AC-23 회귀 테스트 1개 추가), `npm run build`(타입체크 포함)/`npm run lint` 통과. 실제 Backend+Frontend를 띄우고 브라우저(Playwright 스크립트, 커밋 대상 아님)로 Dashboard→매체 상세→캠페인 상세→광고그룹 상세→광고 상세까지 정방향 진입(계층별 Index/이전 기간/하위 목록 표시 여부가 표에 정의된 대로 정확함)과 Breadcrumb으로 광고 상세→광고그룹→캠페인→매체→Dashboard까지 역방향 복귀, Dashboard 복귀 시 광고주/프로젝트/기간/이전 기간 비교 상태가 유지되는 것까지 전부 확인.
+- 진행 중 발견해 고친 문제 2건:
+  1. **AC-23 위반(자체 발견)**: Dashboard 화면이 자신의 필터 상태(광고주/프로젝트/기간/이전 기간 비교)를 URL query string에서 읽어오지 않아, 상세 화면에서 "Dashboard" Breadcrumb으로 돌아오면 매번 빈 상태로 초기화되고 있었다. Dashboard의 각 상태를 URL 파라미터로 초기화하도록 수정하고 회귀 테스트 추가. 이 변경으로 정적 프리렌더링 대상이던 `/dashboard` 페이지가 `useSearchParams()`를 써서 빌드가 실패해(Next.js는 Suspense 경계를 요구함) `Suspense`로 감싸 해결.
+  2. **Breadcrumb에 ID만 표시되는 문제(자체 발견)**: 광고그룹/광고 상세 화면에서 상위 캠페인/광고그룹 Breadcrumb이 표시 이름이 아니라 원본 ID(`camp-meta`, `ag-1`)를 보여주고 있었다. 상위 화면에서 하위 화면으로 이동할 때 이미 알고 있는 이름을 query string으로 함께 넘기도록 수정(추가 API 호출 없이 해결, 기존 컨텍스트 전달 패턴을 그대로 확장).
 
 ## 7. Journey & Attribution
 
@@ -175,7 +187,8 @@
 
 | AC 범위 | 관련 단계 | 상태 |
 |---|---|---|
-| AC-01, AC-14~AC-16, AC-23~AC-24 | Dashboard / 상세 | 미착수 |
+| AC-01, AC-14~AC-16 | Dashboard | 완료 |
+| AC-23~AC-24 | 상세 화면 / Breadcrumb | 완료 |
 | AC-02~AC-13 | Index 계산 | 미착수 |
 | AC-17~AC-22 | Project | 미착수 |
 | AC-25 | 필터율 비공개 | 미착수 |

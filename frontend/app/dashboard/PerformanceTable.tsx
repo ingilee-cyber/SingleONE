@@ -13,6 +13,7 @@ import {
   Typography,
 } from "@mui/material";
 import { INDEX_STATUS_LABEL, type MediaIndexResult } from "@/lib/dashboardApi";
+import { fmt, fmtPercent } from "@/lib/format";
 
 type SortKey =
   | "media"
@@ -51,14 +52,6 @@ function getValue(row: MediaIndexResult, key: SortKey): number | string {
     default:
       return -1;
   }
-}
-
-function fmt(value: number | null | undefined) {
-  return value === null || value === undefined ? "-" : Math.round(value).toLocaleString("ko-KR");
-}
-
-function fmtPercent(value: number | null | undefined) {
-  return value === null || value === undefined ? "-" : `${value.toFixed(1)}%`;
 }
 
 const COLUMNS: { key: SortKey; label: string; info?: string }[] = [

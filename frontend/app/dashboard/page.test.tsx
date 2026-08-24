@@ -5,8 +5,10 @@ import * as dashboardApi from "@/lib/dashboardApi";
 import * as projectApi from "@/lib/projectApi";
 
 const push = vi.fn();
+const mockSearchParams = vi.fn(() => new URLSearchParams());
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
+  useSearchParams: () => mockSearchParams(),
 }));
 
 vi.mock("./EChart", () => ({
@@ -77,6 +79,7 @@ describe("DashboardPage", () => {
   beforeEach(() => {
     window.localStorage.clear();
     push.mockClear();
+    mockSearchParams.mockReturnValue(new URLSearchParams());
     vi.mocked(projectApi.listProjects).mockResolvedValue([project]);
     vi.mocked(dashboardApi.getDashboard).mockResolvedValue(dashboardResponse);
   });
@@ -146,5 +149,27 @@ describe("DashboardPage", () => {
     expect(url).toContain("advertiserId=adv-1");
     expect(url).toContain("projectId=1");
     expect(url).toContain("comparePrevious=true");
+  });
+
+  // AC-23: 상세 화면에서 Breadcrumb으로 돌아왔을 때 필터 상태가 유지되어야 한다.
+  it("restores advertiser/project/period/comparePrevious from the URL when returning via breadcrumb", async () => {
+    mockSearchParams.mockReturnValue(
+      new URLSearchParams({
+        advertiserId: "adv-1",
+        projectId: "1",
+        from: "2026-06-08",
+        to: "2026-06-14",
+        comparePrevious: "false",
+      }),
+    );
+
+    render(<DashboardPage />);
+
+    await waitFor(() => {
+      expect(dashboardApi.getDashboard).toHaveBeenCalledWith(1, "2026-06-08", "2026-06-14");
+    });
+    expect(screen.getByRole("textbox", { name: "광고주 ID" })).toHaveValue("adv-1");
+    expect(screen.getByRole("button", { name: "직접 설정" })).toHaveAttribute("aria-pressed", "true");
+    expect(await screen.findByText("5,000,000")).toBeInTheDocument();
   });
 });

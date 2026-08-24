@@ -3,21 +3,20 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Alert, Box, CircularProgress, Container, Paper, Stack, Typography } from "@mui/material";
-import { getMediaDetail, listCampaigns, type MediaDetailResponse } from "@/lib/detailApi";
+import { getCampaignDetail, listAdGroups, type EntityPerformanceComparison } from "@/lib/detailApi";
 import type { EntityPerformance } from "@/lib/detailApi";
 import type { Media } from "@/lib/projectApi";
 import Breadcrumb from "@/app/detail/Breadcrumb";
 import PerformanceSummary from "@/app/detail/PerformanceSummary";
 import ChildEntityTable from "@/app/detail/ChildEntityTable";
-import IndexBreakdownChart from "@/app/dashboard/IndexBreakdownChart";
-import RollingIndexChart from "@/app/dashboard/RollingIndexChart";
 
-/** PRD 7.2 매체 상세: Index/이전 기간/원본+SingleONE 성과/구성요소 Breakdown/7일 Rolling/캠페인 목록. */
-export default function MediaDetailPage() {
-  const params = useParams<{ media: string }>();
+/** PRD 7.3 캠페인 상세: 원본+SingleONE 성과, 이전 기간 비교, 광고그룹 목록(Index 없음). */
+export default function CampaignDetailPage() {
+  const params = useParams<{ media: string; campaignId: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
   const media = params.media as Media;
+  const campaignId = decodeURIComponent(params.campaignId);
 
   const advertiserId = searchParams.get("advertiserId") ?? "";
   const projectId = Number(searchParams.get("projectId"));
@@ -25,7 +24,7 @@ export default function MediaDetailPage() {
   const to = searchParams.get("to") ?? "";
   const comparePrevious = searchParams.get("comparePrevious") === "true";
 
-  const [detail, setDetail] = useState<MediaDetailResponse | null>(null);
+  const [detail, setDetail] = useState<EntityPerformanceComparison | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,14 +33,14 @@ export default function MediaDetailPage() {
       return;
     }
     setLoading(true);
-    getMediaDetail(projectId, media, from, to)
+    getCampaignDetail(projectId, media, campaignId, from, to)
       .then((data) => {
         setDetail(data);
         setError(null);
       })
-      .catch(() => setError("매체 상세 정보를 불러오지 못했습니다."))
+      .catch(() => setError("캠페인 상세 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
-  }, [projectId, media, from, to]);
+  }, [projectId, media, campaignId, from, to]);
 
   const carryOverQuery = useCallback(
     (extra: Record<string, string>) => {
@@ -51,8 +50,9 @@ export default function MediaDetailPage() {
     [advertiserId, projectId, from, to, comparePrevious],
   );
 
-  const handleCampaignClick = (row: EntityPerformance) => {
-    router.push(`/dashboard/media/${media}/campaigns/${row.id}?${carryOverQuery({})}`);
+  const handleAdGroupClick = (row: EntityPerformance) => {
+    const query = carryOverQuery({ campaignName: detail?.current.name ?? campaignId });
+    router.push(`/dashboard/media/${media}/campaigns/${campaignId}/ad-groups/${row.id}?${query}`);
   };
 
   return (
@@ -62,11 +62,12 @@ export default function MediaDetailPage() {
           <Breadcrumb
             items={[
               { label: "Dashboard", href: `/dashboard?${carryOverQuery({})}` },
-              { label: `매체: ${media}` },
+              { label: `매체: ${media}`, href: `/dashboard/media/${media}?${carryOverQuery({})}` },
+              { label: `캠페인: ${detail?.current.name ?? campaignId}` },
             ]}
           />
           <Typography variant="h4" component="h1">
-            매체 상세: {media}
+            캠페인 상세: {detail?.current.name ?? campaignId}
           </Typography>
 
           {loading && (
@@ -79,22 +80,16 @@ export default function MediaDetailPage() {
           {!loading && !error && detail && (
             <>
               <Paper sx={{ p: 3 }}>
-                <PerformanceSummary current={detail.current} indexSection={{ current: detail.current, previous: detail.previous }} />
-              </Paper>
-              <Paper sx={{ p: 3 }}>
-                <IndexBreakdownChart results={[detail.current]} />
-              </Paper>
-              <Paper sx={{ p: 3 }}>
-                <RollingIndexChart points={detail.rolling} />
+                <PerformanceSummary current={detail.current} previous={detail.previous} />
               </Paper>
               <Paper sx={{ p: 3 }}>
                 <Typography variant="h6" sx={{ mb: 2 }}>
-                  캠페인 목록
+                  광고그룹 목록
                 </Typography>
                 <ChildEntityTable
-                  title="캠페인"
-                  fetchPage={(p) => listCampaigns(projectId, media, { from, to, ...p })}
-                  onRowClick={handleCampaignClick}
+                  title="광고그룹"
+                  fetchPage={(p) => listAdGroups(projectId, media, campaignId, { from, to, ...p })}
+                  onRowClick={handleAdGroupClick}
                 />
               </Paper>
             </>

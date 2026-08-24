@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Alert,
   Box,
@@ -65,17 +65,33 @@ function computeRange(preset: PeriodPreset, customFrom: string, customTo: string
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
+  return (
+    <Suspense fallback={null}>
+      <DashboardPageContent />
+    </Suspense>
+  );
+}
 
-  const [advertiserId, setAdvertiserId] = useState("");
+function DashboardPageContent() {
+  const router = useRouter();
+  // AC-23: 상세 화면에서 Breadcrumb으로 Dashboard에 돌아왔을 때 광고주/프로젝트/기간/이전 기간
+  // 비교 상태를 복원한다(상세 화면 이동 시 이 값들을 query string으로 넘겨둠).
+  const initialParams = useSearchParams();
+
+  const [advertiserId, setAdvertiserId] = useState(() => initialParams.get("advertiserId") ?? "");
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<number | "">("");
+  const [selectedProjectId, setSelectedProjectId] = useState<number | "">(() => {
+    const raw = initialParams.get("projectId");
+    return raw ? Number(raw) : "";
+  });
   const [projectsError, setProjectsError] = useState<string | null>(null);
 
-  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("30d");
-  const [customFrom, setCustomFrom] = useState(toISODate(new Date()));
-  const [customTo, setCustomTo] = useState(toISODate(new Date()));
-  const [comparePrevious, setComparePrevious] = useState(true);
+  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>(() =>
+    initialParams.get("from") && initialParams.get("to") ? "custom" : "30d",
+  );
+  const [customFrom, setCustomFrom] = useState(() => initialParams.get("from") ?? toISODate(new Date()));
+  const [customTo, setCustomTo] = useState(() => initialParams.get("to") ?? toISODate(new Date()));
+  const [comparePrevious, setComparePrevious] = useState(() => initialParams.get("comparePrevious") !== "false");
 
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(false);
