@@ -61,4 +61,19 @@ describe("ChildEntityTable", () => {
 
     expect(onRowClick).toHaveBeenCalledWith(rows[0]);
   });
+
+  // AC-54: 페이지 크기는 최대 200까지만 선택 가능해야 한다(그 이상 옵션이 없어야 함).
+  it("AC-54: offers 200 as the maximum selectable page size and requests it when chosen", async () => {
+    render(<ChildEntityTable title="캠페인" fetchPage={fetchPage} onRowClick={onRowClick} />);
+    await screen.findByText("여름캠페인");
+
+    fireEvent.mouseDown(screen.getByRole("combobox"));
+    const options = screen.getAllByRole("option").map((el) => el.textContent);
+    expect(options).toEqual(["20", "50", "100", "200"]);
+
+    fireEvent.click(screen.getByRole("option", { name: "200" }));
+    await waitFor(() => {
+      expect(fetchPage).toHaveBeenLastCalledWith({ search: undefined, page: 0, size: 200, sort: "name,asc" });
+    });
+  });
 });

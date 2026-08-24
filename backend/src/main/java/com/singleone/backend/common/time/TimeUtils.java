@@ -2,6 +2,7 @@ package com.singleone.backend.common.time;
 
 import java.time.DateTimeException;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
@@ -34,6 +35,16 @@ public final class TimeUtils {
 		} catch (DateTimeException e) {
 			throw new DateTimeParseException("지원하지 않는 날짜/시간 형식입니다: " + value, value, 0, e);
 		}
+	}
+
+	/** Asia/Seoul 기준 해당 날짜의 자정(00:00:00)을 UTC Instant로 변환한다. */
+	public static Instant startOfDaySeoul(LocalDate date) {
+		return date.atStartOfDay(UPLOAD_DEFAULT_ZONE).toInstant();
+	}
+
+	/** Asia/Seoul 기준 해당 날짜의 다음날 자정(exclusive 상한)을 UTC Instant로 변환한다. */
+	public static Instant endOfDaySeoul(LocalDate date) {
+		return date.plusDays(1).atStartOfDay(UPLOAD_DEFAULT_ZONE).toInstant();
 	}
 
 }

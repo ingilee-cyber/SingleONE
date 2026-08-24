@@ -55,6 +55,18 @@ function mediaResult(media: projectApi.Media, indexScore: number): dashboardApi.
   };
 }
 
+function mediaResultWithStatus(media: projectApi.Media, status: dashboardApi.IndexStatus): dashboardApi.MediaIndexResult {
+  return {
+    media,
+    status,
+    rawTotals: { media, impressions: 500000, clicks: 10000, cost: 2500000, rawPurchases: 50, rawRevenue: 10000000, operatingDays: 10 },
+    rawPerformance: { cpa: 50000, roas: 400 },
+    singleOnePerformance: { media, singleOnePurchases: 32.5, singleOneRevenue: 6500000, cpa: 76923, roas: 260 },
+    components: null,
+    indexScore: null,
+  };
+}
+
 const totals: dashboardApi.ProjectTotals = {
   impressions: 1000000,
   clicks: 20000,
@@ -171,5 +183,43 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("textbox", { name: "광고주 ID" })).toHaveValue("adv-1");
     expect(screen.getByRole("button", { name: "직접 설정" })).toHaveAttribute("aria-pressed", "true");
     expect(await screen.findByText("5,000,000")).toBeInTheDocument();
+  });
+
+  // AC-01: Dashboard 기본 진입 시 기간은 최근 30일, 이전 기간 비교는 ON이어야 한다.
+  it("AC-01: defaults to a 30-day period with comparePrevious ON when opened with no query string", async () => {
+    // 실제 "오늘"을 기준으로 최근 30일(오늘 포함) 기대값을 계산한다(fake timer는 RTL의 waitFor
+    // 폴링과 충돌해 테스트가 멈추므로 사용하지 않는다).
+    const toDate = new Date();
+    const fromDate = new Date(toDate);
+    fromDate.setDate(fromDate.getDate() - 29);
+    const format = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+    render(<DashboardPage />);
+    expect(screen.getByRole("button", { name: "최근 30일" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("switch", { name: "이전 기간 비교" })).toBeChecked();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "광고주 ID" }), { target: { value: "adv-1" } });
+    await waitFor(() => {
+      expect(dashboardApi.getDashboard).toHaveBeenCalledWith(1, format(fromDate), format(toDate));
+    });
+  });
+
+  // AC-05/06/08/09: Index 상태별 라벨이 그대로 표시돼야 한다.
+  it("shows the correct Korean label for each non-VALID index status", async () => {
+    vi.mocked(dashboardApi.getDashboard).mockResolvedValue({
+      ...dashboardResponse,
+      current: [
+        mediaResultWithStatus("GOOGLE", "INSUFFICIENT_DATA"),
+        mediaResultWithStatus("META", "MISSING_REQUIRED_DATA"),
+        mediaResultWithStatus("TIKTOK", "COMPARISON_MEDIA_INSUFFICIENT"),
+      ],
+    });
+
+    render(<DashboardPage />);
+    fireEvent.change(screen.getByRole("textbox", { name: "광고주 ID" }), { target: { value: "adv-1" } });
+
+    expect(await screen.findByText("데이터 부족")).toBeInTheDocument();
+    expect(screen.getByText("필수 데이터 누락")).toBeInTheDocument();
+    expect(screen.getByText("비교 가능한 매체 부족")).toBeInTheDocument();
   });
 });

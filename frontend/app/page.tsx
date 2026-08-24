@@ -71,6 +71,12 @@ export default function Home() {
           <MuiLink component={NextLink} href="/dashboard">
             Dashboard 화면으로 이동
           </MuiLink>
+          <MuiLink component={NextLink} href="/journey">
+            Journey & Attribution 화면으로 이동
+          </MuiLink>
+          <MuiLink component={NextLink} href="/simulation">
+            Media Planning Simulation 화면으로 이동
+          </MuiLink>
         </Stack>
       </Box>
     </Container>

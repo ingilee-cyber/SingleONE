@@ -1,0 +1,13 @@
+event_id,anonymous_user_id,advertiser_id,event_type,event_timestamp,media,campaign_id,ad_group_id,ad_id,order_id,purchase_revenue
+e1,U001,adv-journey-verify,CLICK,2026-07-08T10:00:00Z,META,c1,,,,
+e2,U001,adv-journey-verify,CLICK,2026-07-09T10:00:00Z,GOOGLE,c1,,,,
+e3,U001,adv-journey-verify,PURCHASE,2026-07-10T10:00:00Z,,,,,order-u001,100000
+e4,U002,adv-journey-verify,CLICK,2026-07-08T11:00:00Z,TIKTOK,c1,,,,
+e5,U002,adv-journey-verify,CLICK,2026-07-09T11:00:00Z,META,c1,,,,
+e6,U002,adv-journey-verify,PURCHASE,2026-07-10T11:00:00Z,,,,,order-u002,120000
+e7,U003,adv-journey-verify,CLICK,2026-07-09T12:00:00Z,GOOGLE,c1,,,,
+e8,U003,adv-journey-verify,PURCHASE,2026-07-10T12:00:00Z,,,,,order-u003,80000
+e9,U004,adv-journey-verify,CLICK,2026-07-08T09:00:00Z,META,c1,,,,
+e10,U004,adv-journey-verify,CLICK,2026-07-08T15:00:00Z,GOOGLE,c1,,,,
+e11,U004,adv-journey-verify,CLICK,2026-07-09T09:00:00Z,TIKTOK,c1,,,,
+e12,U004,adv-journey-verify,PURCHASE,2026-07-10T09:00:00Z,,,,,order-u004,150000

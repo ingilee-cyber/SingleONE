@@ -87,6 +87,22 @@ describe("UploadsPage", () => {
     });
   });
 
+  // AC-29: 사용자가 overwrite를 취소하면 batch는 CANCELLED가 된다.
+  it("AC-29: clicking 취소 on a duplicate-confirmation batch calls cancelUpload and shows CANCELLED", async () => {
+    vi.mocked(uploadApi.listUploads).mockResolvedValueOnce([duplicateBatch]);
+    const cancelledBatch: uploadApi.UploadBatch = { ...duplicateBatch, status: "CANCELLED" };
+    vi.mocked(uploadApi.cancelUpload).mockResolvedValue(cancelledBatch);
+    vi.mocked(uploadApi.listUploads).mockResolvedValue([cancelledBatch]);
+
+    render(<UploadsPage />);
+    fireEvent.click(await screen.findByRole("button", { name: "취소" }));
+
+    await waitFor(() => {
+      expect(uploadApi.cancelUpload).toHaveBeenCalledWith(2);
+    });
+    expect(await screen.findByText("취소됨")).toBeInTheDocument();
+  });
+
   it("shows row-specific errors in a dialog for a failed batch", async () => {
     vi.mocked(uploadApi.listUploads).mockResolvedValue([failedBatch]);
     render(<UploadsPage />);

@@ -1,44 +1,39 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   Alert,
   Box,
   CircularProgress,
   Container,
-  FormControlLabel,
   MenuItem,
   Paper,
   Stack,
-  Switch,
+  Tab,
+  Tabs,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
-import { getDashboard, type DashboardResponse } from "@/lib/dashboardApi";
-import { listProjects, type Media, type Project } from "@/lib/projectApi";
+import { listProjects, type Project } from "@/lib/projectApi";
 import { PERIOD_OPTIONS, computeRange, toISODate, type PeriodPreset } from "@/lib/period";
-import KpiCards from "./KpiCards";
-import MediaIndexChart from "./MediaIndexChart";
-import PerformanceTable from "./PerformanceTable";
-import IndexBreakdownChart from "./IndexBreakdownChart";
-import RollingIndexChart from "./RollingIndexChart";
-import JourneySummaryPlaceholder from "./JourneySummaryPlaceholder";
+import { getJourneyAnalysis, type JourneyAnalysisResult } from "@/lib/journeyApi";
+import SankeyChart from "./SankeyChart";
+import TopPathTable from "./TopPathTable";
+import ChannelAttributionTable from "./ChannelAttributionTable";
+import ChannelPairTable from "./ChannelPairTable";
 
-export default function DashboardPage() {
+export default function JourneyPage() {
   return (
     <Suspense fallback={null}>
-      <DashboardPageContent />
+      <JourneyPageContent />
     </Suspense>
   );
 }
 
-function DashboardPageContent() {
-  const router = useRouter();
-  // AC-23: 상세 화면에서 Breadcrumb으로 Dashboard에 돌아왔을 때 광고주/프로젝트/기간/이전 기간
-  // 비교 상태를 복원한다(상세 화면 이동 시 이 값들을 query string으로 넘겨둠).
+function JourneyPageContent() {
   const initialParams = useSearchParams();
 
   const [advertiserId, setAdvertiserId] = useState(() => initialParams.get("advertiserId") ?? "");
@@ -54,15 +49,14 @@ function DashboardPageContent() {
   );
   const [customFrom, setCustomFrom] = useState(() => initialParams.get("from") ?? toISODate(new Date()));
   const [customTo, setCustomTo] = useState(() => initialParams.get("to") ?? toISODate(new Date()));
-  const [comparePrevious, setComparePrevious] = useState(() => initialParams.get("comparePrevious") !== "false");
 
-  const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
+  const [tab, setTab] = useState(0);
+  const [result, setResult] = useState<JourneyAnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const { from, to } = useMemo(() => computeRange(periodPreset, customFrom, customTo), [periodPreset, customFrom, customTo]);
 
-  // PRD 6.1: 광고주 변경 시 프로젝트 목록을 다시 조회하고, 유효하지 않은 기존 선택은 해제한다.
   useEffect(() => {
     if (!advertiserId) {
       setProjects([]);
@@ -78,18 +72,16 @@ function DashboardPageContent() {
       .catch(() => setProjectsError("프로젝트 목록을 불러오지 못했습니다."));
   }, [advertiserId]);
 
-  const selectedProject = projects.find((p) => p.projectId === selectedProjectId) ?? null;
-
   const refresh = useCallback(() => {
     if (!selectedProjectId || !from || !to) {
-      setDashboard(null);
+      setResult(null);
       return;
     }
     setLoading(true);
     setError(null);
-    getDashboard(Number(selectedProjectId), from, to)
-      .then(setDashboard)
-      .catch(() => setError("Dashboard 데이터를 불러오지 못했습니다."))
+    getJourneyAnalysis(Number(selectedProjectId), from, to)
+      .then(setResult)
+      .catch(() => setError("Journey 데이터를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
   }, [selectedProjectId, from, to]);
 
@@ -97,23 +89,12 @@ function DashboardPageContent() {
     refresh();
   }, [refresh]);
 
-  const handleMediaClick = (media: Media) => {
-    const query = new URLSearchParams({
-      advertiserId,
-      projectId: String(selectedProjectId),
-      from,
-      to,
-      comparePrevious: String(comparePrevious),
-    });
-    router.push(`/dashboard/media/${media}?${query.toString()}`);
-  };
-
   return (
     <Container maxWidth="lg">
       <Box sx={{ py: 6 }}>
         <Stack spacing={4}>
           <Typography variant="h4" component="h1">
-            Dashboard
+            Journey & Attribution
           </Typography>
 
           <Paper sx={{ p: 3 }}>
@@ -142,11 +123,6 @@ function DashboardPageContent() {
                     </MenuItem>
                   ))}
                 </TextField>
-                <FormControlLabel
-                  control={<Switch checked={comparePrevious} onChange={(e) => setComparePrevious(e.target.checked)} />}
-                  label="이전 기간 비교"
-                  sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
-                />
               </Stack>
               <ToggleButtonGroup
                 value={periodPreset}
@@ -186,10 +162,7 @@ function DashboardPageContent() {
 
           {!advertiserId && <Alert severity="info">광고주 ID를 입력하세요.</Alert>}
           {advertiserId && projects.length === 0 && !projectsError && (
-            <Alert severity="info">이 광고주에는 아직 프로젝트가 없습니다. 먼저 데이터를 업로드하세요.</Alert>
-          )}
-          {selectedProject && selectedProject.campaigns.length === 0 && (
-            <Alert severity="warning">선택한 프로젝트에 포함된 캠페인이 없습니다.</Alert>
+            <Alert severity="info">이 광고주에는 아직 프로젝트가 없습니다.</Alert>
           )}
 
           {loading && (
@@ -199,37 +172,29 @@ function DashboardPageContent() {
           )}
           {error && <Alert severity="error">{error}</Alert>}
 
-          {!loading && !error && dashboard && selectedProject && selectedProject.campaigns.length > 0 && (
-            <Stack spacing={4}>
-              <KpiCards
-                totals={dashboard.currentTotals}
-                previousTotals={comparePrevious ? dashboard.previousTotals : undefined}
-                comparePrevious={comparePrevious}
-              />
-              <Paper sx={{ p: 3 }}>
-                <MediaIndexChart results={dashboard.current} onMediaClick={handleMediaClick} />
-              </Paper>
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  원본 + SingleONE 성과
-                </Typography>
-                <PerformanceTable results={dashboard.current} />
-              </Paper>
-              <Paper sx={{ p: 3 }}>
-                <IndexBreakdownChart results={dashboard.current} />
-              </Paper>
-              <Paper sx={{ p: 3 }}>
-                <RollingIndexChart points={dashboard.rolling} />
-              </Paper>
-              <Paper sx={{ p: 3 }}>
-                <JourneySummaryPlaceholder
-                  advertiserId={advertiserId}
-                  projectId={Number(selectedProjectId)}
-                  from={from}
-                  to={to}
-                />
-              </Paper>
-            </Stack>
+          {!loading && !error && result && (
+            <Paper sx={{ p: 3 }}>
+              <Tabs value={tab} onChange={(_, value) => setTab(value)} sx={{ mb: 3 }}>
+                <Tab label="사용자 여정" />
+                <Tab label="채널별 전환 기여도" />
+                <Tab label="채널 페어 인사이트" />
+              </Tabs>
+
+              {result.attributedJourneyCount === 0 ? (
+                <Alert severity="info">선택한 기간에 분석 가능한 Journey 이벤트가 없습니다.</Alert>
+              ) : (
+                <>
+                  {tab === 0 && (
+                    <Stack spacing={3}>
+                      <SankeyChart topPaths={result.topPaths} />
+                      <TopPathTable topPaths={result.topPaths} />
+                    </Stack>
+                  )}
+                  {tab === 1 && <ChannelAttributionTable rows={result.attribution} />}
+                  {tab === 2 && <ChannelPairTable rows={result.channelPairs} />}
+                </>
+              )}
+            </Paper>
           )}
         </Stack>
       </Box>

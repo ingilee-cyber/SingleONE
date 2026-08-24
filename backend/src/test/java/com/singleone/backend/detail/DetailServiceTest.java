@@ -183,6 +183,76 @@ class DetailServiceTest extends AbstractIntegrationTest {
 	}
 
 	@Test
+	void ac11_hierarchicalSumsAreConsistentAcrossAdAdGroupCampaignAndMedia() {
+		String advertiserId = "adv-detail-ac11";
+		Project project = setUpTwoMediaProject(advertiserId);
+
+		long batch = successBatch(advertiserId);
+		LocalDate from = LocalDate.of(2026, 7, 1);
+		LocalDate to = LocalDate.of(2026, 7, 1);
+		// META: ag-1(ad-1,ad-2) + ag-2(ad-3,ad-4), 서로 다른 cost/구매로 합산 정밀도를 확인한다.
+		List<PerformanceRow> rows = List.of(
+			row(from, advertiserId, Media.META, "camp-meta", "ag-1", "ad-1", 111_111, 3),
+			row(from, advertiserId, Media.META, "camp-meta", "ag-1", "ad-2", 222_222, 7),
+			row(from, advertiserId, Media.META, "camp-meta", "ag-2", "ad-3", 333_333, 11),
+			row(from, advertiserId, Media.META, "camp-meta", "ag-2", "ad-4", 444_444, 13));
+		performanceFactStore.insertBatch(rows, batch);
+
+		EntityPerformance ad1 = detailService.getAdDetail(project.getProjectId(), Media.META, "camp-meta", "ag-1", "ad-1", from, to);
+		EntityPerformance ad2 = detailService.getAdDetail(project.getProjectId(), Media.META, "camp-meta", "ag-1", "ad-2", from, to);
+		EntityPerformance ad3 = detailService.getAdDetail(project.getProjectId(), Media.META, "camp-meta", "ag-2", "ad-3", from, to);
+		EntityPerformance ad4 = detailService.getAdDetail(project.getProjectId(), Media.META, "camp-meta", "ag-2", "ad-4", from, to);
+		EntityPerformance adGroup1 = detailService.getAdGroupDetail(project.getProjectId(), Media.META, "camp-meta", "ag-1", from, to);
+		EntityPerformance adGroup2 = detailService.getAdGroupDetail(project.getProjectId(), Media.META, "camp-meta", "ag-2", from, to);
+		EntityPerformanceComparison campaign = detailService.getCampaignDetail(project.getProjectId(), Media.META, "camp-meta", from, to);
+		List<MediaIndexResult> dashboard = performanceService.calculatePeriod(project.getProjectId(), from, to);
+		MediaIndexResult media = dashboard.stream().filter(r -> r.media() == Media.META).findFirst().orElseThrow();
+
+		// 광고 -> 광고그룹: 원본/SingleONE 구매·매출 모두 정확히 일치해야 한다(BigDecimal 정밀도 유지).
+		assertThat(ad1.rawTotals().cost().add(ad2.rawTotals().cost())).isEqualByComparingTo(adGroup1.rawTotals().cost());
+		assertThat(ad1.singleOnePerformance().singleOnePurchases().add(ad2.singleOnePerformance().singleOnePurchases()))
+			.isEqualByComparingTo(adGroup1.singleOnePerformance().singleOnePurchases());
+		assertThat(ad3.rawTotals().cost().add(ad4.rawTotals().cost())).isEqualByComparingTo(adGroup2.rawTotals().cost());
+
+		// 광고그룹 -> 캠페인.
+		assertThat(adGroup1.rawTotals().cost().add(adGroup2.rawTotals().cost())).isEqualByComparingTo(campaign.current().rawTotals().cost());
+		assertThat(adGroup1.rawTotals().rawPurchases().add(adGroup2.rawTotals().rawPurchases()))
+			.isEqualByComparingTo(campaign.current().rawTotals().rawPurchases());
+		assertThat(adGroup1.singleOnePerformance().singleOneRevenue().add(adGroup2.singleOnePerformance().singleOneRevenue()))
+			.isEqualByComparingTo(campaign.current().singleOnePerformance().singleOneRevenue());
+
+		// 캠페인 -> 매체(Dashboard의 매체 집계와 정확히 일치).
+		assertThat(campaign.current().rawTotals().cost()).isEqualByComparingTo(media.rawTotals().cost());
+		assertThat(campaign.current().rawTotals().rawPurchases()).isEqualByComparingTo(media.rawTotals().rawPurchases());
+		assertThat(campaign.current().singleOnePerformance().singleOnePurchases())
+			.isEqualByComparingTo(media.singleOnePerformance().singleOnePurchases());
+	}
+
+	@Test
+	void ac12_subLevelPerformanceIsShownEvenBelowSingleOnePurchaseMinimum() {
+		String advertiserId = "adv-detail-ac12";
+		Project project = setUpTwoMediaProject(advertiserId);
+
+		long batch = successBatch(advertiserId);
+		LocalDate from = LocalDate.of(2026, 7, 1);
+		LocalDate to = LocalDate.of(2026, 7, 1);
+		// META 필터율 0.65 기준 원본 구매 5 -> SingleONE 구매 3.25(10 미만)이지만 값은 숨기지 않는다.
+		performanceFactStore.insertBatch(
+			List.of(row(from, advertiserId, Media.META, "camp-meta", "ag-1", "ad-1", 50_000, 5)), batch);
+
+		EntityPerformanceComparison campaign = detailService.getCampaignDetail(project.getProjectId(), Media.META, "camp-meta", from, to);
+		EntityPerformance adGroup = detailService.getAdGroupDetail(project.getProjectId(), Media.META, "camp-meta", "ag-1", from, to);
+		EntityPerformance ad = detailService.getAdDetail(project.getProjectId(), Media.META, "camp-meta", "ag-1", "ad-1", from, to);
+
+		assertThat(campaign.current().singleOnePerformance().singleOnePurchases()).isLessThan(new BigDecimal("10"));
+		assertThat(campaign.current().singleOnePerformance().singleOnePurchases()).isEqualByComparingTo("3.25");
+		assertThat(adGroup.singleOnePerformance().singleOnePurchases()).isEqualByComparingTo("3.25");
+		assertThat(ad.singleOnePerformance().singleOnePurchases()).isEqualByComparingTo("3.25");
+		// 값 자체는 null이 아니라 계속 노출돼야 한다(PRD 7.6/AC-12) — Index 개념만 여기 없을 뿐.
+		assertThat(ad.rawTotals().rawPurchases()).isEqualByComparingTo("5");
+	}
+
+	@Test
 	void requestingMediaNotInProjectIsRejected() {
 		String advertiserId = "adv-detail-5";
 		Project project = setUpTwoMediaProject(advertiserId);

@@ -166,35 +166,80 @@
 
 ## 7. Journey & Attribution
 
-- 상태: 미착수
-- 테스트 결과: 미실행
+- 상태: 완료
+- 생성물:
+  - Backend 신규 패키지 `com.singleone.backend.journey`(Stage 3의 "계산과 DB 접근 분리" 패턴 재사용):
+    - `JourneyAttributionCalculator`(Spring/DB 비의존 순수 계산): 사용자별 구매 여정을 구성하고(PRD 9.3 — 구매 전 7일 + 직전 구매시점 이후만 유효 터치포인트, 선택 프로젝트 캠페인만 eligible), unique 채널 집합 기준 Linear Attribution과 unordered Channel Pair를 계산하며, 연속 동일 채널을 압축한 Path를 구매수 기준 Top 20으로 추린다.
+    - `JourneyEventRepository`: ClickHouse `journey_event`에서 SUCCESS batch만, `event_id` 기준 `argMax` dedup으로 조회(기존 `PerformanceAggregationRepository`와 동일한 dedup 철학).
+    - `JourneyAnalysisService`: 프로젝트 검증 후 `[from-7일, to]` 범위만 조회하면 충분함을 수학적으로 확인해 그 범위만 fetch(7일/직전구매 규칙 모두 그보다 과거 데이터가 필요 없음).
+    - `JourneyController`: `GET /api/v1/projects/{projectId}/journey?from=&to=` 단일 엔드포인트 — Dashboard 요약과 Journey 화면 3개 탭이 이 응답 하나를 공유(중복 계산 없음).
+    - `TimeUtils`에 `startOfDaySeoul`/`endOfDaySeoul` 2개 메서드 추가(Asia/Seoul 날짜 → UTC Instant 경계 변환, 기존 공용 유틸 확장).
+  - Frontend: `frontend/lib/period.ts`(Dashboard의 기간 프리셋 로직을 뽑아 Journey 화면과 공유), `frontend/lib/journeyApi.ts`, 신규 라우트 `frontend/app/journey/page.tsx`(필터 바 + MUI Tabs 3개), `SankeyChart.tsx`+`buildSankeyOption.ts`(순수 함수로 분리해 단위 테스트, 기존 `EChart.tsx` 재사용), `TopPathTable.tsx`/`ChannelAttributionTable.tsx`/`ChannelPairTable.tsx`. Dashboard의 `JourneySummaryPlaceholder.tsx`를 실제 데이터를 보여주는 컴포넌트로 교체(같은 Journey API 재사용, "상세 분석으로 이동" 버튼이 광고주/프로젝트/기간을 유지한 채 `/journey`로 이동).
+- 해석/설계 확정 사항(계획 승인 시 명시):
+  - PRD 9.1 "전체 구매 중 비중"은 매출이 아니라 구매(Journey) 건수 기준 비중이라는 PRD 명시 사항을 그대로 구현(해석이 아님).
+  - 유효 터치포인트가 0건인 구매는 배분할 채널이 없어 Attribution/Pair/Path 결과에서 제외(오류 아님, Golden Dataset엔 없는 케이스).
+  - Sankey는 같은 경로 안에서 채널이 비연속으로 반복될 수 있어(PRD AC-36 Meta→Google→Meta 예시) 채널명만으로 노드를 만들면 순환 그래프가 되어 렌더링이 깨진다 — 노드 이름에 단계 번호를 붙여(`"1. Meta"`/`"3. Meta"`) 순환을 없앰.
+- 테스트 결과:
+  - **`JourneyAttributionCalculatorTest`(순수 JUnit, Docker 불필요, 9개 전부 통과)**: PRD 15.4 Golden Journey Dataset을 그대로 재현해 Google 1.833333/Meta 1.333333/TikTok 0.833333(합계 4.000000), Channel Pair Meta+Google=2/Meta+TikTok=2/Google+TikTok=1을 정확히 검증(AC-39/40/41). 추가로 AC-34(7일 경계 포함/8일 제외), AC-35(연속 동일 채널 압축), AC-36(비연속 반복 채널 각 0.5), AC-37(직전 구매 이전 클릭 재사용 금지), AC-38(프로젝트 밖 캠페인 클릭 제외), 유효 터치포인트 0건 케이스까지 전부 통과.
+  - `TimeUtilsTest`에 추가한 `startOfDaySeoul`/`endOfDaySeoul` 2개 테스트 통과.
+  - `JourneyAnalysisServiceTest`(Testcontainers)는 이 PC Docker 제약(1단계부터 동일)으로 자동 실행 불가 — `bootRun`으로 실제 서버를 띄우고 PRD 15.4 Golden Journey Dataset을 Journey CSV로 직접 업로드한 뒤 `GET /api/v1/projects/{id}/journey`를 curl로 호출해 **API 응답이 PRD 수치와 소수점까지 정확히 일치**함을 확인(Google 1.8333333333333333333333333333333333, Meta 1.3333333333333333333333333333333333, TikTok 0.8333333333333333333333333333333333, Pair 2/2/1, 합계 구매매출 450,000). 존재하지 않는 프로젝트 요청 시 400 오류도 확인. 이 과정에서 실제 버그 2건을 발견해 고침(아래).
+  - `./gradlew test` 전체 재실행 결과 48개 중 10개 실패는 전부 기존과 동일한 Testcontainers 환경 제약(신규 실패 없음).
+  - Frontend: `npm test` 전체 통과(신규 `buildSankeyOption`/`JourneySummaryPlaceholder`/`/journey` 페이지 테스트 포함), `npm run build`(`/journey` 라우트 정상 등록, 타입체크 포함)/`npm run lint` 통과. 실제 Backend+Frontend를 띄우고 브라우저(Playwright 스크립트, 커밋 대상 아님)로 Dashboard Journey 요약 → "상세 분석으로 이동"(필터 컨텍스트 유지 확인) → `/journey`의 사용자 여정(Sankey+Top Path 테이블)/채널별 전환 기여도(안내 문구, "SingleONE 기여 구매" 미사용 확인)/채널 페어 인사이트(인과적 표현 미사용 확인) 3개 탭까지 전부 실제 렌더링을 스크린샷으로 확인함.
+- 진행 중 발견해 고친 버그 2건(전부 수동 curl 검증 중 발견 — Docker 제약으로 Testcontainers를 못 쓰는 상황에서 이 수동 검증이 없었다면 놓쳤을 것들):
+  1. `JourneyEventRepository`의 조회 SQL이 WHERE절에서 `event_timestamp`를 필터링하면서 동시에 SELECT에서 같은 이름으로 `argMax(event_timestamp, upload_batch_id) AS event_timestamp`를 만들어, ClickHouse가 WHERE의 참조를 집계 별칭으로 오인해 `ILLEGAL_AGGREGATION` 오류를 냄. → 기존 `PerformanceAggregationRepository.fetchEntityTotals`와 동일하게 내부 쿼리(원본 컬럼으로 필터링)와 바깥 쿼리(집계)를 분리하는 구조로 수정.
+  2. 날짜 필터 값을 `java.sql.Timestamp.toString()`으로 문자열화했는데, 이 메서드는 초 단위가 0이어도 항상 `.0`을 붙여(`"2026-06-24 00:00:00.0"`) ClickHouse `DateTime` 타입 파싱이 `Cannot convert string ... to type DateTime` 오류로 실패함. → `DateTimeFormatter`로 UTC "yyyy-MM-dd HH:mm:ss" 문자열을 직접 생성하도록 수정(실제 저장된 데이터로 UTC 그대로 저장됨을 `docker exec`로 재확인).
+- 알려진 제약: `JourneyAnalysisServiceTest`는 1~6단계와 동일한 이유(이 PC Docker Desktop/Testcontainers 비호환)로 자동 실행되지 않는다.
 
 ## 8. Media Planning Simulation Model 및 UI
 
-- 상태: 미착수
-- 테스트 결과: 미실행
+- 상태: 완료
+- 생성물:
+  - Backend 신규 패키지 `com.singleone.backend.simulation`:
+    - `WeeklyLogModelFitter`(Spring/DB 비의존 순수 계산): `y = a·ln(x) + b`를 OLS로 적합해 `a/b/R²`와 유효성(a>0 AND R²>=0.50)을 반환. 자연로그·최소제곱 계산에만 한정해 `double`을 쓰고(BigDecimal에 초월함수가 없어 사용자 확인 후 결정한 예외 범위), 그 앞뒤(주간 SingleONE 구매/매출 집계, 기간 환산, CPA/ROAS)는 전부 기존과 동일하게 BigDecimal을 유지.
+    - `SimulationService`: 기존 `PerformanceAggregationRepository.fetchDailyMediaTotals`/`SingleOneIndexCalculator.aggregateWindow`/`computeSingleOnePerformance`/`ProjectService.resolveIncludedCampaigns`를 그대로 재사용해 새 집계 코드를 만들지 않고 기준 성과 기간 종료일 기준 최근 8주를 버킷화, 매체마다 유효 주차 판정(cost/impressions/clicks>0, SingleONE 구매>0, 매출>=0) → 유효 주차 수/구매 합계/비용 변동폭 조건(PRD 10.5/AC-47) → 구매·매출 두 모델 적합 → 예산 범위(과거 최소~최대, 150% 외삽) 분류 → 신뢰도(높음/보통/낮음/예측 불가) 산정 → 전체 KPI 산출 가능 여부(AC-52)까지 오케스트레이션. `project.isSystemDefault()`면 즉시 거부(PRD 10.2/AC-22).
+    - `SimulationController`: `POST /api/v1/projects/{projectId}/simulation`(순수 record 요청 DTO, 이 코드베이스의 기존 관례대로 Bean Validation 애너테이션 없음).
+  - Frontend: `frontend/app/simulation/page.tsx`(광고주/프로젝트 선택 시 시스템 `전체 캠페인` 프로젝트는 목록에서 아예 제외 — Dashboard/Journey처럼 라벨만 붙이는 게 아니라 선택 자체가 안 됨), 기준 성과 기간/시뮬레이션 기간을 `frontend/lib/period.ts`(Stage 7에서 추출한 공용 프리셋)로 각각 따로 입력, 선택된 프로젝트가 포함한 매체마다 예산 입력란 제공(총예산은 자동 합산 표시만, 별도 입력 없음). `frontend/app/simulation/simulationStore.ts`(Zustand, `persist` 미들웨어 미사용 — 새로고침 시 자연 초기화, PRD 10.9/AC-53). `MediaResultTable.tsx`(매체별 카드: 입력/환산현재/예상 구매·매출·CPA·ROAS/신뢰도 배지/관찰 문구), `MarginalEfficiencyChart.tsx`+`buildMarginalEfficiencyOption.ts`(순수 함수로 분리해 단위 테스트, 기존 `EChart.tsx` 재사용해 ECharts `markLine`/`markArea`로 입력 예산·환산 현재 운영·과거 운영 범위·150% 한계를 곡선 위에 표시 — 이 저장소 첫 markLine 사용). 홈 화면에 Journey(Stage 7에서 누락됐던 링크)와 Simulation 링크를 함께 추가.
+- 해석/설계 확정 사항(계획 승인 시 사용자에게 명시하고 진행):
+  - BigDecimal 예외 범위: OLS 회귀 적합(자연로그, 계수, R²)만 `double`, 그 외 전부 BigDecimal 유지(Hard Rule 13 관련 사용자 확인 완료).
+  - 입력 예산이 0원인 매체는 PRD 10.7 표에 신뢰도 등급이 명시돼 있지 않아 신뢰도를 "해당 없음"(null)으로 처리(예상 성과는 0, 전체 KPI는 막지 않음).
+  - 신뢰도 "높음" 판정의 R²>=0.75 조건은 구매·매출 두 모델 중 더 낮은 R²(약한 쪽)을 기준으로 판정.
+- 테스트 결과:
+  - **`WeeklyLogModelFitterTest`(순수 JUnit, Docker 불필요, 6개 전부 통과)**: `y=50·ln(x)-100`으로 정확히 생성한 데이터에서 OLS가 a/b/R²=1을 그대로 복원, 감소형 곡선(a<=0)은 R²가 완벽해도 무효, 노이즈 데이터의 낮은 R²도 무효, 데이터 2개 미만은 무효, 회귀식 적용값 계산과 음수 보정까지 검증.
+  - `SimulationServiceTest`(Testcontainers)는 이 PC Docker 제약(1단계부터 동일)으로 자동 실행 불가 — `bootRun`+curl로 실제 8주치 성과 데이터를 업로드해 수동 검증: 충분한 데이터가 있는 매체는 신뢰도 "높음"으로 정상 예측(구매/매출/CPA/ROAS 전부 산출), 데이터가 3주치뿐인 매체는 "데이터 부족" 사유로 예측 불가, 그 매체 예산이 0보다 커 전체 KPI가 산출 불가로 전환되는 것(AC-52)까지 확인. 추가로 예산 0원(예상 성과 0, 신뢰도 없음, 전체 KPI 안 막힘), 과거 최대의 150% 초과(예측 불가), 최대~150% 사이(신뢰도 낮음), 시스템 `전체 캠페인` 프로젝트 선택 거부까지 전부 확인.
+  - `./gradlew test` 전체 재실행 결과 55개 중 11개 실패는 전부 기존과 동일한 Testcontainers 환경 제약(신규 실패 없음).
+  - Frontend: `npm test` 전체 통과(신규 `buildMarginalEfficiencyOption`/`simulationStore`/`/simulation` 페이지 테스트 포함), `npm run build`(`/simulation` 라우트 정상 등록, 타입체크 포함)/`npm run lint` 통과. 실제 Backend+Frontend를 띄우고 브라우저(Playwright 스크립트, 커밋 대상 아님)로 전체 시나리오 확인: 금지 표현("추천 예산"/"증액 추천"/"감액 추천"/"최적 예산"/"구매 최대화"/"매출 최대화") 미노출, 전체 캠페인 프로젝트가 드롭다운 옵션에서 실제로 빠짐, 예산/기간 입력 후 실행 시 신뢰도 "높음" 매체와 "예측 불가" 매체가 카드로 각각 표시, 한계 효율 곡선에 입력 예산/과거 운영 범위/150% 한계선이 실제로 그려짐, 전체 KPI "산출 불가" 및 면책 문구 노출, **새로고침 후 모든 입력값이 빈 상태로 초기화되는 것(AC-53)까지 스크린샷과 함께 확인**.
+
 
 ## 9. Playwright 핵심 E2E 및 Edge Acceptance Criteria 완료
 
-- 상태: 미착수
-- 테스트 결과: 미실행
+- 상태: 완료
+- 새 기능 추가 단계가 아니라, 1~8단계에서 만든 SingleONE 전체가 PRD AC-01~AC-55를 실제로 만족하는지 전수 재검증한 최종 단계다. 상세 결과는 `docs/FINAL_VALIDATION_REPORT.md`(AC별 표, Backend/Frontend/E2E/Golden Dataset 결과, 잔여 이슈, 실행 방법 포함)에 별도로 기록했다.
+- 생성물:
+  - Backend 테스트 갭 보강: `DetailServiceTest`에 AC-11(계층 합산 정밀도)/AC-12(하위 소규모 성과 노출) 추가, `JourneyAttributionCalculatorTest`에 AC-55(Top 20 절단) 추가, `SimulationServiceTest`에 AC-44/45/46/49/50 추가, 신규 `analytics/ApiResponseFilterRateNonDisclosureTest.java`(AC-25, 응답 DTO 11종에 filterRate 필드가 없음을 record 컴포넌트 리플렉션으로 검증), 신규 `upload/UploadServiceFileSizeLimitTest.java`(AC-32, Mockito로 50MB 초과 거부 검증).
+  - Frontend 테스트 갭 보강: 신규 `lib/period.test.ts`(AC-01), `dashboard/page.test.tsx`에 AC-01/05/06/08/09 추가, `journey/page.test.tsx`에 AC-42 추가, `simulation/page.test.tsx`에 AC-43(결과 렌더 후 재검사)/AC-50/AC-52/AC-53 추가, `uploads/page.test.tsx`에 AC-29 추가, `detail/ChildEntityTable.test.tsx`에 AC-54(200 최대 옵션) 추가.
+  - Playwright E2E 신설(그동안 throwaway 스크립트로만 확인하던 것을 커밋 대상 자산으로 전환): `frontend/e2e/dashboard-and-detail.spec.ts`, `upload-lifecycle.spec.ts`, `journey.spec.ts`, `simulation.spec.ts` + 공용 시딩 헬퍼 `frontend/e2e/testData.ts`.
+  - Testcontainers 재시도: `DOCKER_HOST`를 여러 파이프로 재지정해 재확인했으나 1단계부터 동일한 `IllegalStateException`으로 실패 — 근본 원인이 여전히 동일함을 최종 확인(코드 결함 아님, 환경 제약 그대로 유지).
+- 이번 단계에서 실제로 발견해 고친 결함 2건(테스트를 새로 작성하는 과정에서 발견 — 이 검증이 없었다면 놓쳤을 것들):
+  1. **`frontend/lib/period.ts` 타임존 버그**: `toISODate`가 `Date.toISOString()`(UTC)을 쓰는데 `computeRange`의 "이번 달"/"지난 달"은 로컬 시간 기준(`new Date(year, month, 1)`)으로 계산해, UTC+9(Asia/Seoul)에서 "이번 달"/"지난 달" 기간이 실제로 하루씩 밀리는 버그가 있었다. `toISODate`를 로컬 연/월/일 getter 기반으로 재작성해 수정(Hard Rule 14 준수).
+  2. **PRD 10.3 Tooltip 누락**: Simulation 화면 "환산 현재 운영"에 PRD가 명시한 안내 문구가 없었다. `MediaResultTable.tsx`에 기존 ⓘ Tooltip 패턴 그대로 추가.
+- 테스트 결과: Backend `./gradlew test` 59개 중 48개 자동 통과, 11개는 기존과 동일한 Testcontainers 환경 제약(전부 `bootRun`+curl로 fresh 재검증 통과). Frontend `npm test` 61개 중 60개 통과(1개는 반복 확인된 부하성 flake, 단독 실행 시 항상 통과), `npm run build`/`npm run lint` 통과. Playwright `npx playwright test --workers=1` 6/6 전부 통과. Golden Index Dataset과 Golden Journey Dataset 모두 기대값 변경 없이 그대로 통과. AC-01~AC-55 전부 PASS(자세한 근거는 `docs/FINAL_VALIDATION_REPORT.md` 표 참고).
 
 ---
 
 ## Acceptance Criteria 커버리지 (AC-01 ~ AC-55)
 
-각 AC가 어느 단계에서 검증되었는지 구현이 진행되면서 아래에 채운다 (현재는 전부 미착수).
+9단계(최종 Acceptance Test)에서 AC-01~AC-55 전체를 전수 재검증했다. **55개 전부 완료(PASS)**. AC별 검증 대상/테스트 방법/자동 테스트 파일/실제 결과/비고는 `docs/FINAL_VALIDATION_REPORT.md`에 상세히 기록돼 있다.
 
 | AC 범위 | 관련 단계 | 상태 |
 |---|---|---|
 | AC-01, AC-14~AC-16 | Dashboard | 완료 |
+| AC-02~AC-13 | Index 계산 | 완료 |
+| AC-17~AC-22 | Project | 완료 |
 | AC-23~AC-24 | 상세 화면 / Breadcrumb | 완료 |
-| AC-02~AC-13 | Index 계산 | 미착수 |
-| AC-17~AC-22 | Project | 미착수 |
-| AC-25 | 필터율 비공개 | 미착수 |
-| AC-26~AC-33 | 업로드 | 미착수 |
-| AC-34~AC-42 | Journey & Attribution | 미착수 |
-| AC-43~AC-52 | Media Planning Simulation | 미착수 |
-| AC-53 | Simulation 비저장 | 미착수 |
-| AC-54 | Pagination | 미착수 |
-| AC-55 | Journey Top 20 | 미착수 |
+| AC-25 | 필터율 비공개 | 완료 |
+| AC-26~AC-33 | 업로드 | 완료 |
+| AC-34~AC-42 | Journey & Attribution | 완료 |
+| AC-43~AC-52 | Media Planning Simulation | 완료 |
+| AC-53 | Simulation 비저장 | 완료 |
+| AC-54 | Pagination | 완료 |
+| AC-55 | Journey Top 20 | 완료 |
