@@ -2,15 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Alert, Box, CircularProgress, Container, Paper, Stack, Typography } from "@mui/material";
+import { Alert, Box, CircularProgress, Container, Stack } from "@mui/material";
 import { getMediaDetail, listCampaigns, type MediaDetailResponse } from "@/lib/detailApi";
 import type { EntityPerformance } from "@/lib/detailApi";
 import type { Media } from "@/lib/projectApi";
 import Breadcrumb from "@/app/detail/Breadcrumb";
 import PerformanceSummary from "@/app/detail/PerformanceSummary";
 import ChildEntityTable from "@/app/detail/ChildEntityTable";
-import IndexBreakdownChart from "@/app/dashboard/IndexBreakdownChart";
-import RollingIndexChart from "@/app/dashboard/RollingIndexChart";
+import PageHeader from "@/app/components/common/PageHeader";
+import SectionCard from "@/app/components/common/SectionCard";
+import IndexBreakdownChart, { INDEX_BREAKDOWN_CHART_TITLE } from "@/app/dashboard/IndexBreakdownChart";
+import RollingIndexChart, { ROLLING_INDEX_CHART_TITLE } from "@/app/dashboard/RollingIndexChart";
 
 /** PRD 7.2 매체 상세: Index/이전 기간/원본+SingleONE 성과/구성요소 Breakdown/7일 Rolling/캠페인 목록. */
 export default function MediaDetailPage() {
@@ -65,9 +67,7 @@ export default function MediaDetailPage() {
               { label: `매체: ${media}` },
             ]}
           />
-          <Typography variant="h4" component="h1">
-            매체 상세: {media}
-          </Typography>
+          <PageHeader title={`매체 상세: ${media}`} />
 
           {loading && (
             <Stack alignItems="center" sx={{ py: 6 }}>
@@ -78,25 +78,22 @@ export default function MediaDetailPage() {
 
           {!loading && !error && detail && (
             <>
-              <Paper sx={{ p: 3 }}>
+              <SectionCard>
                 <PerformanceSummary current={detail.current} indexSection={{ current: detail.current, previous: detail.previous }} />
-              </Paper>
-              <Paper sx={{ p: 3 }}>
+              </SectionCard>
+              <SectionCard title={INDEX_BREAKDOWN_CHART_TITLE}>
                 <IndexBreakdownChart results={[detail.current]} />
-              </Paper>
-              <Paper sx={{ p: 3 }}>
+              </SectionCard>
+              <SectionCard title={ROLLING_INDEX_CHART_TITLE}>
                 <RollingIndexChart points={detail.rolling} />
-              </Paper>
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  캠페인 목록
-                </Typography>
+              </SectionCard>
+              <SectionCard title="캠페인 목록">
                 <ChildEntityTable
                   title="캠페인"
                   fetchPage={(p) => listCampaigns(projectId, media, { from, to, ...p })}
                   onRowClick={handleCampaignClick}
                 />
-              </Paper>
+              </SectionCard>
             </>
           )}
         </Stack>

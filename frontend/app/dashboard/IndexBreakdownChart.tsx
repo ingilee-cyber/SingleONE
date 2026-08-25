@@ -1,8 +1,10 @@
 "use client";
 
-import { Alert, Box, Typography } from "@mui/material";
+import { Alert, Box } from "@mui/material";
 import EChart from "./EChart";
 import type { MediaIndexResult } from "@/lib/dashboardApi";
+
+export const INDEX_BREAKDOWN_CHART_TITLE = "SingleONE Index 구성요소 Breakdown";
 
 interface IndexBreakdownChartProps {
   results: MediaIndexResult[];
@@ -13,14 +15,7 @@ export default function IndexBreakdownChart({ results }: IndexBreakdownChartProp
   const valid = results.filter((r) => r.status === "VALID" && r.components !== null);
 
   if (valid.length === 0) {
-    return (
-      <Box>
-        <Typography variant="h6">SingleONE Index 구성요소 Breakdown</Typography>
-        <Alert severity="info" sx={{ mt: 2 }}>
-          Breakdown을 표시할 수 있는 매체가 없습니다.
-        </Alert>
-      </Box>
-    );
+    return <Alert severity="info">Breakdown을 표시할 수 있는 매체가 없습니다.</Alert>;
   }
 
   const option = {
@@ -38,7 +33,6 @@ export default function IndexBreakdownChart({ results }: IndexBreakdownChartProp
 
   return (
     <Box>
-      <Typography variant="h6">SingleONE Index 구성요소 Breakdown</Typography>
       <EChart option={option} />
     </Box>
   );

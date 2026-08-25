@@ -9,23 +9,24 @@ import {
   Container,
   FormControlLabel,
   MenuItem,
-  Paper,
   Stack,
   Switch,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
-  Typography,
 } from "@mui/material";
 import { getDashboard, type DashboardResponse } from "@/lib/dashboardApi";
 import { listProjects, type Media, type Project } from "@/lib/projectApi";
 import { PERIOD_OPTIONS, computeRange, toISODate, type PeriodPreset } from "@/lib/period";
+import PageHeader from "@/app/components/common/PageHeader";
+import FilterPanel from "@/app/components/common/FilterPanel";
+import SectionCard from "@/app/components/common/SectionCard";
 import KpiCards from "./KpiCards";
-import MediaIndexChart from "./MediaIndexChart";
+import MediaIndexChart, { MEDIA_INDEX_CHART_TITLE, MEDIA_INDEX_CHART_INFO } from "./MediaIndexChart";
 import PerformanceTable from "./PerformanceTable";
-import IndexBreakdownChart from "./IndexBreakdownChart";
-import RollingIndexChart from "./RollingIndexChart";
-import JourneySummaryPlaceholder from "./JourneySummaryPlaceholder";
+import IndexBreakdownChart, { INDEX_BREAKDOWN_CHART_TITLE } from "./IndexBreakdownChart";
+import RollingIndexChart, { ROLLING_INDEX_CHART_TITLE } from "./RollingIndexChart";
+import JourneySummaryPlaceholder, { JOURNEY_SUMMARY_TITLE } from "./JourneySummaryPlaceholder";
 
 export default function DashboardPage() {
   return (
@@ -112,77 +113,73 @@ function DashboardPageContent() {
     <Container maxWidth="lg">
       <Box sx={{ py: 6 }}>
         <Stack spacing={4}>
-          <Typography variant="h4" component="h1">
-            Dashboard
-          </Typography>
+          <PageHeader title="Dashboard" />
 
-          <Paper sx={{ p: 3 }}>
-            <Stack spacing={2}>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+          <FilterPanel>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <TextField
+                label="광고주 ID"
+                value={advertiserId}
+                onChange={(e) => setAdvertiserId(e.target.value)}
+                size="small"
+                fullWidth
+              />
+              <TextField
+                select
+                label="프로젝트"
+                value={selectedProjectId}
+                onChange={(e) => setSelectedProjectId(e.target.value === "" ? "" : Number(e.target.value))}
+                size="small"
+                fullWidth
+                disabled={projects.length === 0}
+              >
+                {projects.map((project) => (
+                  <MenuItem key={project.projectId} value={project.projectId}>
+                    {project.projectName}
+                    {project.referenceOnly ? " (참고용 비교)" : ""}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <FormControlLabel
+                control={<Switch checked={comparePrevious} onChange={(e) => setComparePrevious(e.target.checked)} />}
+                label="이전 기간 비교"
+                sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
+              />
+            </Stack>
+            <ToggleButtonGroup
+              value={periodPreset}
+              exclusive
+              size="small"
+              onChange={(_, value) => value && setPeriodPreset(value)}
+            >
+              {PERIOD_OPTIONS.map((option) => (
+                <ToggleButton key={option.value} value={option.value}>
+                  {option.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+            {periodPreset === "custom" && (
+              <Stack direction="row" spacing={2}>
                 <TextField
-                  label="광고주 ID"
-                  value={advertiserId}
-                  onChange={(e) => setAdvertiserId(e.target.value)}
+                  label="시작일"
+                  type="date"
+                  value={customFrom}
+                  onChange={(e) => setCustomFrom(e.target.value)}
                   size="small"
-                  fullWidth
+                  InputLabelProps={{ shrink: true }}
                 />
                 <TextField
-                  select
-                  label="프로젝트"
-                  value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value === "" ? "" : Number(e.target.value))}
+                  label="종료일"
+                  type="date"
+                  value={customTo}
+                  onChange={(e) => setCustomTo(e.target.value)}
                   size="small"
-                  fullWidth
-                  disabled={projects.length === 0}
-                >
-                  {projects.map((project) => (
-                    <MenuItem key={project.projectId} value={project.projectId}>
-                      {project.projectName}
-                      {project.referenceOnly ? " (참고용 비교)" : ""}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <FormControlLabel
-                  control={<Switch checked={comparePrevious} onChange={(e) => setComparePrevious(e.target.checked)} />}
-                  label="이전 기간 비교"
-                  sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
+                  InputLabelProps={{ shrink: true }}
                 />
               </Stack>
-              <ToggleButtonGroup
-                value={periodPreset}
-                exclusive
-                size="small"
-                onChange={(_, value) => value && setPeriodPreset(value)}
-              >
-                {PERIOD_OPTIONS.map((option) => (
-                  <ToggleButton key={option.value} value={option.value}>
-                    {option.label}
-                  </ToggleButton>
-                ))}
-              </ToggleButtonGroup>
-              {periodPreset === "custom" && (
-                <Stack direction="row" spacing={2}>
-                  <TextField
-                    label="시작일"
-                    type="date"
-                    value={customFrom}
-                    onChange={(e) => setCustomFrom(e.target.value)}
-                    size="small"
-                    InputLabelProps={{ shrink: true }}
-                  />
-                  <TextField
-                    label="종료일"
-                    type="date"
-                    value={customTo}
-                    onChange={(e) => setCustomTo(e.target.value)}
-                    size="small"
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Stack>
-              )}
-              {projectsError && <Alert severity="error">{projectsError}</Alert>}
-            </Stack>
-          </Paper>
+            )}
+            {projectsError && <Alert severity="error">{projectsError}</Alert>}
+          </FilterPanel>
 
           {!advertiserId && <Alert severity="info">광고주 ID를 입력하세요.</Alert>}
           {advertiserId && projects.length === 0 && !projectsError && (
@@ -206,29 +203,26 @@ function DashboardPageContent() {
                 previousTotals={comparePrevious ? dashboard.previousTotals : undefined}
                 comparePrevious={comparePrevious}
               />
-              <Paper sx={{ p: 3 }}>
+              <SectionCard title={MEDIA_INDEX_CHART_TITLE} info={MEDIA_INDEX_CHART_INFO}>
                 <MediaIndexChart results={dashboard.current} onMediaClick={handleMediaClick} />
-              </Paper>
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  원본 + SingleONE 성과
-                </Typography>
+              </SectionCard>
+              <SectionCard title="원본 + SingleONE 성과">
                 <PerformanceTable results={dashboard.current} />
-              </Paper>
-              <Paper sx={{ p: 3 }}>
+              </SectionCard>
+              <SectionCard title={INDEX_BREAKDOWN_CHART_TITLE}>
                 <IndexBreakdownChart results={dashboard.current} />
-              </Paper>
-              <Paper sx={{ p: 3 }}>
+              </SectionCard>
+              <SectionCard title={ROLLING_INDEX_CHART_TITLE}>
                 <RollingIndexChart points={dashboard.rolling} />
-              </Paper>
-              <Paper sx={{ p: 3 }}>
+              </SectionCard>
+              <SectionCard title={JOURNEY_SUMMARY_TITLE}>
                 <JourneySummaryPlaceholder
                   advertiserId={advertiserId}
                   projectId={Number(selectedProjectId)}
                   from={from}
                   to={to}
                 />
-              </Paper>
+              </SectionCard>
             </Stack>
           )}
         </Stack>

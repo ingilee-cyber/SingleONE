@@ -14,7 +14,6 @@ import {
   DialogTitle,
   FormControlLabel,
   MenuItem,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -37,6 +36,10 @@ import {
   type Media,
   type Project,
 } from "@/lib/projectApi";
+import { mediaColor } from "@/lib/mediaColors";
+import PageHeader from "@/app/components/common/PageHeader";
+import FilterPanel from "@/app/components/common/FilterPanel";
+import SectionCard from "@/app/components/common/SectionCard";
 
 const MIN_DISTINCT_MEDIA = 2;
 
@@ -160,11 +163,9 @@ export default function ProjectsPage() {
     <Container maxWidth="md">
       <Box sx={{ py: 6 }}>
         <Stack spacing={4}>
-          <Typography variant="h4" component="h1">
-            프로젝트
-          </Typography>
+          <PageHeader title="프로젝트" />
 
-          <Paper sx={{ p: 3 }}>
+          <FilterPanel>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
               <TextField
                 label="광고주 ID"
@@ -184,17 +185,14 @@ export default function ProjectsPage() {
                 variant="contained"
                 onClick={openCreateDialog}
                 disabled={!advertiserId}
-                sx={{ whiteSpace: "nowrap" }}
+                sx={{ whiteSpace: "nowrap", flexShrink: 0 }}
               >
                 새 프로젝트
               </Button>
             </Stack>
-          </Paper>
+          </FilterPanel>
 
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              프로젝트 목록
-            </Typography>
+          <SectionCard title="프로젝트 목록">
             {listError && <Alert severity="error">{listError}</Alert>}
             <TableContainer>
               <Table size="small">
@@ -214,7 +212,12 @@ export default function ProjectsPage() {
                       <TableCell>
                         <Stack direction="row" spacing={0.5} flexWrap="wrap">
                           {[...new Set(project.campaigns.map((c) => c.media))].map((media) => (
-                            <Chip key={media} label={media} size="small" />
+                            <Chip
+                              key={media}
+                              label={media}
+                              size="small"
+                              sx={{ bgcolor: `${mediaColor(media)}1F`, color: mediaColor(media), fontWeight: 600 }}
+                            />
                           ))}
                         </Stack>
                       </TableCell>
@@ -239,7 +242,7 @@ export default function ProjectsPage() {
                 </TableBody>
               </Table>
             </TableContainer>
-          </Paper>
+          </SectionCard>
         </Stack>
       </Box>
 

@@ -224,6 +224,28 @@
   2. **PRD 10.3 Tooltip 누락**: Simulation 화면 "환산 현재 운영"에 PRD가 명시한 안내 문구가 없었다. `MediaResultTable.tsx`에 기존 ⓘ Tooltip 패턴 그대로 추가.
 - 테스트 결과: Backend `./gradlew test` 59개 중 48개 자동 통과, 11개는 기존과 동일한 Testcontainers 환경 제약(전부 `bootRun`+curl로 fresh 재검증 통과). Frontend `npm test` 61개 중 60개 통과(1개는 반복 확인된 부하성 flake, 단독 실행 시 항상 통과), `npm run build`/`npm run lint` 통과. Playwright `npx playwright test --workers=1` 6/6 전부 통과. Golden Index Dataset과 Golden Journey Dataset 모두 기대값 변경 없이 그대로 통과. AC-01~AC-55 전부 PASS(자세한 근거는 `docs/FINAL_VALIDATION_REPORT.md` 표 참고).
 
+## 10. UI/UX 디자인 개선 (기능/로직 변경 없음)
+
+- 상태: 완료
+- 새 기능 추가 단계가 아니라, 1~9단계에서 이미 완성된 SingleONE의 화면 디자인만 B2B SaaS 대시보드 수준으로 다듬은 단계다. API/계산 로직/데이터 모델/route 구조는 전혀 바꾸지 않았다(사용자가 명시한 절대 원칙).
+- 생성물:
+  - 디자인 시스템: `frontend/app/theme.ts`(브랜드 블루 팔레트, 타이포 스케일, Card/Button/Chip/Table/Tab 등 MUI 컴포넌트 공통 스타일), `frontend/app/globals.css`(Arial 기본값 제거), `frontend/app/layout.tsx`(Noto Sans KR 웹폰트 `next/font`로 self-host).
+  - 공통 레이아웃: 신규 `frontend/app/AppShell.tsx` — 모든 화면을 감싸는 상단 바(로고+제품명)와 좌측 아이콘 사이드바(홈/데이터 관리/프로젝트/대시보드/Journey/Simulation). 기존 route는 그대로 두고 이동 수단만 추가함.
+  - 매체 색상 통일: 신규 `frontend/lib/mediaColors.ts` — META/GOOGLE/TIKTOK/NAVER/CRITEO 고정 색상표. `MediaIndexChart`/`RollingIndexChart`/`PerformanceTable`/`buildSankeyOption`(Journey Sankey)/`MediaResultTable`/`buildMarginalEfficiencyOption`(Simulation 곡선)이 전부 이 표를 공유해, 같은 매체는 모든 차트에서 같은 색으로 보인다.
+  - 공통 재사용 컴포넌트(신규 `frontend/app/components/common/`): `PageHeader`(페이지 타이틀), `FilterPanel`(광고주ID/프로젝트/기간 등 필터 영역 공통 컨테이너), `SectionCard`(제목+ⓘ툴팁+본문을 감싸는 카드, 기존에 반복되던 `<Paper><Typography variant="h6">...` 패턴 대체), `StatCard`(KPI/지표 표시 공통화). Dashboard/Journey/Simulation/Projects/Uploads/매체·캠페인·광고그룹·광고 상세 화면 전부 이 컴포넌트들로 교체했고, `KpiCards`와 `PerformanceSummary`의 지표 카드 로직을 `StatCard` 하나로 통합했다.
+  - 실제 레이아웃 버그 수정(디자인 개선 중 발견): Dashboard KPI 카드 6개가 그리드에 안 맞아 마지막 카드가 혼자 다음 줄로 밀리던 문제, Simulation 매체별 예산 입력 필드 라벨이 서로 겹치던 문제, 한계효율 차트의 주석 라벨 3개가 서로 겹치던 문제(ECharts markLine이 기본적으로 라벨을 세로로 회전시켜 글자가 겹쳐 보이는 문제였음 — `rotate: 0`과 위치 분산으로 해결), Projects 화면 "새 프로젝트" 버튼 텍스트가 좁은 공간에서 잘리던 문제.
+- 해석/설계 확정 사항(계획 승인 시 사용자에게 명시):
+  - 사이드바 메뉴 라벨은 "대시보드"(한글)로 표기해 상세 화면 Breadcrumb의 "Dashboard"(영문, PRD 화면명 그대로) 링크와 접근성 이름이 겹치지 않게 함(둘 다 "Dashboard"였다면 자동화 도구/스크린리더가 어떤 링크인지 구분 못하는 문제가 실제로 있었음).
+  - `reference-example-dashboard.png` 참고 이미지의 "예산 추천 시뮬레이션"/"추천 예산 적용"/"시나리오 저장" 패널은 카드/표의 시각적 스타일만 참고하고 추천·자동적용·저장 기능은 차용하지 않음(Hard Rule 5/6).
+- 테스트 결과:
+  - Frontend: `npm test`(Vitest, `--no-file-parallelism`으로 직렬 실행) 61개 전부 통과. `npm run build`(타입체크 포함) 성공.
+  - Playwright `npx playwright test --workers=1` 6/6 전부 통과(1회는 전체 동시 실행, 나머지는 자원 경합으로 개별 재실행 후 통과 — 이 PC의 메모리 여유가 낮을 때(사용자 Chrome이 다량 사용 중) 발생하는 이미 알려진 환경적 지연이며 코드 결함 아님).
+  - 실제 Backend+Frontend+데모 데이터(`abc-brand`)로 Dashboard/Journey/Simulation/Projects/Uploads/매체 상세 화면을 브라우저 스크린샷으로 직접 확인.
+  - 기능 변경 자체 점검: Frontend 코드 diff는 스타일/마크업/공통 컴포넌트 추출만 포함하며, API 호출 경로·요청 파라미터·상태 관리 로직·계산 로직은 모두 기존 그대로임을 확인.
+- 진행 중 발견해 고친 버그 2건(디자인 작업 중 실제로 발견):
+  1. AppShell 로고 옆 "SingleONE" 글자가 MUI `subtitle1`의 기본 HTML 태그(`<h6>`)로 렌더링되어, 홈 화면의 실제 제목(`<h1>SingleONE</h1>`)과 이름이 같은 heading이 2개가 되는 문제 — `component="span"`으로 수정.
+  2. 위 문제의 연장선으로, 사이드바의 "Dashboard" 메뉴와 상세 화면 Breadcrumb의 "Dashboard" 링크 이름이 같아 자동 테스트(및 접근성 도구)가 어떤 링크인지 구분하지 못하던 문제 — 사이드바 라벨을 "대시보드"로 변경해 해결.
+
 ---
 
 ## Acceptance Criteria 커버리지 (AC-01 ~ AC-55)

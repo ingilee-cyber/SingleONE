@@ -9,7 +9,6 @@ import {
   CircularProgress,
   Container,
   MenuItem,
-  Paper,
   Stack,
   TextField,
   ToggleButton,
@@ -19,6 +18,9 @@ import {
 import { listProjects, type Media, type Project } from "@/lib/projectApi";
 import { PERIOD_OPTIONS, computeRange, toISODate, type PeriodPreset } from "@/lib/period";
 import { fmt, fmtPercent } from "@/lib/format";
+import PageHeader from "@/app/components/common/PageHeader";
+import FilterPanel from "@/app/components/common/FilterPanel";
+import SectionCard from "@/app/components/common/SectionCard";
 import { useSimulationStore } from "./simulationStore";
 import MediaResultTable from "./MediaResultTable";
 
@@ -150,16 +152,13 @@ function SimulationPageContent() {
     <Container maxWidth="lg">
       <Box sx={{ py: 6 }}>
         <Stack spacing={4}>
-          <Typography variant="h4" component="h1">
-            Media Planning Simulation
-          </Typography>
+          <PageHeader title="Media Planning Simulation" />
           <Alert severity="info">
             이 화면은 예산을 추천하거나 자동으로 배분하지 않습니다. 사용자가 입력한 매체별 예산을 과거 성과 모델에 대입했을 때의
             예상 결과만 보여주는 의사결정 참고용 기능입니다.
           </Alert>
 
-          <Paper sx={{ p: 3 }}>
-            <Stack spacing={3}>
+          <FilterPanel>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 <TextField
                   label="광고주 ID"
@@ -212,18 +211,25 @@ function SimulationPageContent() {
               {mediaList.length > 0 && (
                 <Stack spacing={1}>
                   <Typography variant="subtitle2">매체별 예산</Typography>
-                  <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap" }}>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+                      gap: 2,
+                    }}
+                  >
                     {mediaList.map((media) => (
                       <TextField
                         key={media}
                         label={media}
                         type="number"
                         size="small"
+                        fullWidth
                         value={store.mediaBudgets[media] ?? ""}
                         onChange={(e) => store.setMediaBudget(media, e.target.value)}
                       />
                     ))}
-                  </Stack>
+                  </Box>
                   <Typography variant="body2" color="text.secondary">
                     총예산(자동 합산): {fmt(totalBudget)}
                   </Typography>
@@ -238,8 +244,7 @@ function SimulationPageContent() {
               >
                 시뮬레이션 실행
               </Button>
-            </Stack>
-          </Paper>
+          </FilterPanel>
 
           {store.loading && (
             <Stack alignItems="center" sx={{ py: 6 }}>
@@ -250,10 +255,7 @@ function SimulationPageContent() {
 
           {store.result && (
             <Stack spacing={3}>
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  전체 예상 성과
-                </Typography>
+              <SectionCard title="전체 예상 성과">
                 {store.result.totalAvailable ? (
                   <Stack direction="row" spacing={4} sx={{ flexWrap: "wrap" }}>
                     <Typography>예상 SingleONE 구매: {fmt(store.result.totalPredictedPurchases)}</Typography>
@@ -267,7 +269,7 @@ function SimulationPageContent() {
                     아래에서 계속 확인할 수 있습니다.
                   </Alert>
                 )}
-              </Paper>
+              </SectionCard>
 
               <MediaResultTable mediaResults={store.result.mediaResults} />
 

@@ -6,6 +6,8 @@ import { Alert, Button, Stack, Typography } from "@mui/material";
 import { fmt } from "@/lib/format";
 import { getJourneyAnalysis, type JourneyAnalysisResult } from "@/lib/journeyApi";
 
+export const JOURNEY_SUMMARY_TITLE = "Journey & Attribution 요약";
+
 interface JourneySummaryProps {
   advertiserId: string;
   projectId: number;
@@ -42,7 +44,6 @@ export default function JourneySummaryPlaceholder({ advertiserId, projectId, fro
 
   return (
     <Stack spacing={1}>
-      <Typography variant="h6">Journey & Attribution 요약</Typography>
       {error && <Alert severity="error">{error}</Alert>}
       {!error && result && result.attributedJourneyCount === 0 && (
         <Alert severity="info">선택한 기간에 분석 가능한 Journey 이벤트가 없습니다.</Alert>

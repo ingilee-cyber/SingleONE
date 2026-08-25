@@ -12,7 +12,6 @@ import {
   DialogContent,
   DialogTitle,
   MenuItem,
-  Paper,
   Stack,
   Table,
   TableBody,
@@ -36,6 +35,8 @@ import {
   type UploadStatus,
   type UploadType,
 } from "@/lib/uploadApi";
+import PageHeader from "@/app/components/common/PageHeader";
+import SectionCard from "@/app/components/common/SectionCard";
 
 const STATUS_LABEL: Record<UploadStatus, string> = {
   VALIDATING: "검증 중",
@@ -138,13 +139,10 @@ export default function UploadsPage() {
     <Container maxWidth="md">
       <Box sx={{ py: 6 }}>
         <Stack spacing={4}>
-          <Typography variant="h4" component="h1">
-            데이터 관리
-          </Typography>
+          <PageHeader title="데이터 관리" />
 
-          <Paper sx={{ p: 3 }}>
+          <SectionCard title="파일 업로드">
             <Stack spacing={2}>
-              <Typography variant="h6">파일 업로드</Typography>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 <TextField
                   label="광고주 ID"
@@ -181,12 +179,9 @@ export default function UploadsPage() {
                 업로드
               </Button>
             </Stack>
-          </Paper>
+          </SectionCard>
 
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              업로드 이력
-            </Typography>
+          <SectionCard title="업로드 이력">
             <TableContainer>
               <Table size="small">
                 <TableHead>
@@ -235,7 +230,7 @@ export default function UploadsPage() {
                 </TableBody>
               </Table>
             </TableContainer>
-          </Paper>
+          </SectionCard>
         </Stack>
       </Box>
 

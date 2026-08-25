@@ -8,18 +8,19 @@ import {
   CircularProgress,
   Container,
   MenuItem,
-  Paper,
   Stack,
   Tab,
   Tabs,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
-  Typography,
 } from "@mui/material";
 import { listProjects, type Project } from "@/lib/projectApi";
 import { PERIOD_OPTIONS, computeRange, toISODate, type PeriodPreset } from "@/lib/period";
 import { getJourneyAnalysis, type JourneyAnalysisResult } from "@/lib/journeyApi";
+import PageHeader from "@/app/components/common/PageHeader";
+import FilterPanel from "@/app/components/common/FilterPanel";
+import SectionCard from "@/app/components/common/SectionCard";
 import SankeyChart from "./SankeyChart";
 import TopPathTable from "./TopPathTable";
 import ChannelAttributionTable from "./ChannelAttributionTable";
@@ -93,72 +94,68 @@ function JourneyPageContent() {
     <Container maxWidth="lg">
       <Box sx={{ py: 6 }}>
         <Stack spacing={4}>
-          <Typography variant="h4" component="h1">
-            Journey & Attribution
-          </Typography>
+          <PageHeader title="Journey & Attribution" />
 
-          <Paper sx={{ p: 3 }}>
-            <Stack spacing={2}>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+          <FilterPanel>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <TextField
+                label="광고주 ID"
+                value={advertiserId}
+                onChange={(e) => setAdvertiserId(e.target.value)}
+                size="small"
+                fullWidth
+              />
+              <TextField
+                select
+                label="프로젝트"
+                value={selectedProjectId}
+                onChange={(e) => setSelectedProjectId(e.target.value === "" ? "" : Number(e.target.value))}
+                size="small"
+                fullWidth
+                disabled={projects.length === 0}
+              >
+                {projects.map((project) => (
+                  <MenuItem key={project.projectId} value={project.projectId}>
+                    {project.projectName}
+                    {project.referenceOnly ? " (참고용 비교)" : ""}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
+            <ToggleButtonGroup
+              value={periodPreset}
+              exclusive
+              size="small"
+              onChange={(_, value) => value && setPeriodPreset(value)}
+            >
+              {PERIOD_OPTIONS.map((option) => (
+                <ToggleButton key={option.value} value={option.value}>
+                  {option.label}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+            {periodPreset === "custom" && (
+              <Stack direction="row" spacing={2}>
                 <TextField
-                  label="광고주 ID"
-                  value={advertiserId}
-                  onChange={(e) => setAdvertiserId(e.target.value)}
+                  label="시작일"
+                  type="date"
+                  value={customFrom}
+                  onChange={(e) => setCustomFrom(e.target.value)}
                   size="small"
-                  fullWidth
+                  InputLabelProps={{ shrink: true }}
                 />
                 <TextField
-                  select
-                  label="프로젝트"
-                  value={selectedProjectId}
-                  onChange={(e) => setSelectedProjectId(e.target.value === "" ? "" : Number(e.target.value))}
+                  label="종료일"
+                  type="date"
+                  value={customTo}
+                  onChange={(e) => setCustomTo(e.target.value)}
                   size="small"
-                  fullWidth
-                  disabled={projects.length === 0}
-                >
-                  {projects.map((project) => (
-                    <MenuItem key={project.projectId} value={project.projectId}>
-                      {project.projectName}
-                      {project.referenceOnly ? " (참고용 비교)" : ""}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  InputLabelProps={{ shrink: true }}
+                />
               </Stack>
-              <ToggleButtonGroup
-                value={periodPreset}
-                exclusive
-                size="small"
-                onChange={(_, value) => value && setPeriodPreset(value)}
-              >
-                {PERIOD_OPTIONS.map((option) => (
-                  <ToggleButton key={option.value} value={option.value}>
-                    {option.label}
-                  </ToggleButton>
-                ))}
-              </ToggleButtonGroup>
-              {periodPreset === "custom" && (
-                <Stack direction="row" spacing={2}>
-                  <TextField
-                    label="시작일"
-                    type="date"
-                    value={customFrom}
-                    onChange={(e) => setCustomFrom(e.target.value)}
-                    size="small"
-                    InputLabelProps={{ shrink: true }}
-                  />
-                  <TextField
-                    label="종료일"
-                    type="date"
-                    value={customTo}
-                    onChange={(e) => setCustomTo(e.target.value)}
-                    size="small"
-                    InputLabelProps={{ shrink: true }}
-                  />
-                </Stack>
-              )}
-              {projectsError && <Alert severity="error">{projectsError}</Alert>}
-            </Stack>
-          </Paper>
+            )}
+            {projectsError && <Alert severity="error">{projectsError}</Alert>}
+          </FilterPanel>
 
           {!advertiserId && <Alert severity="info">광고주 ID를 입력하세요.</Alert>}
           {advertiserId && projects.length === 0 && !projectsError && (
@@ -173,7 +170,7 @@ function JourneyPageContent() {
           {error && <Alert severity="error">{error}</Alert>}
 
           {!loading && !error && result && (
-            <Paper sx={{ p: 3 }}>
+            <SectionCard>
               <Tabs value={tab} onChange={(_, value) => setTab(value)} sx={{ mb: 3 }}>
                 <Tab label="사용자 여정" />
                 <Tab label="채널별 전환 기여도" />
@@ -194,7 +191,7 @@ function JourneyPageContent() {
                   {tab === 2 && <ChannelPairTable rows={result.channelPairs} />}
                 </>
               )}
-            </Paper>
+            </SectionCard>
           )}
         </Stack>
       </Box>

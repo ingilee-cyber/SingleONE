@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import {
+  Box,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -14,6 +16,7 @@ import {
 } from "@mui/material";
 import { INDEX_STATUS_LABEL, type MediaIndexResult } from "@/lib/dashboardApi";
 import { fmt, fmtPercent } from "@/lib/format";
+import { mediaColor } from "@/lib/mediaColors";
 
 type SortKey =
   | "media"
@@ -119,7 +122,12 @@ export default function PerformanceTable({ results }: PerformanceTableProps) {
         <TableBody>
           {sorted.map((row) => (
             <TableRow key={row.media}>
-              <TableCell>{row.media}</TableCell>
+              <TableCell>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: mediaColor(row.media), flexShrink: 0 }} />
+                  <Typography variant="body2">{row.media}</Typography>
+                </Stack>
+              </TableCell>
               <TableCell>{fmt(row.rawTotals?.cost)}</TableCell>
               <TableCell>{fmt(row.rawTotals?.impressions)}</TableCell>
               <TableCell>{fmt(row.rawTotals?.clicks)}</TableCell>

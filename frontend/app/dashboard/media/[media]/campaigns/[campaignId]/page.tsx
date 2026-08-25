@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Alert, Box, CircularProgress, Container, Paper, Stack, Typography } from "@mui/material";
+import { Alert, Box, CircularProgress, Container, Stack } from "@mui/material";
 import { getCampaignDetail, listAdGroups, type EntityPerformanceComparison } from "@/lib/detailApi";
 import type { EntityPerformance } from "@/lib/detailApi";
 import type { Media } from "@/lib/projectApi";
 import Breadcrumb from "@/app/detail/Breadcrumb";
 import PerformanceSummary from "@/app/detail/PerformanceSummary";
 import ChildEntityTable from "@/app/detail/ChildEntityTable";
+import PageHeader from "@/app/components/common/PageHeader";
+import SectionCard from "@/app/components/common/SectionCard";
 
 /** PRD 7.3 캠페인 상세: 원본+SingleONE 성과, 이전 기간 비교, 광고그룹 목록(Index 없음). */
 export default function CampaignDetailPage() {
@@ -66,9 +68,7 @@ export default function CampaignDetailPage() {
               { label: `캠페인: ${detail?.current.name ?? campaignId}` },
             ]}
           />
-          <Typography variant="h4" component="h1">
-            캠페인 상세: {detail?.current.name ?? campaignId}
-          </Typography>
+          <PageHeader title={`캠페인 상세: ${detail?.current.name ?? campaignId}`} />
 
           {loading && (
             <Stack alignItems="center" sx={{ py: 6 }}>
@@ -79,19 +79,16 @@ export default function CampaignDetailPage() {
 
           {!loading && !error && detail && (
             <>
-              <Paper sx={{ p: 3 }}>
+              <SectionCard>
                 <PerformanceSummary current={detail.current} previous={detail.previous} />
-              </Paper>
-              <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  광고그룹 목록
-                </Typography>
+              </SectionCard>
+              <SectionCard title="광고그룹 목록">
                 <ChildEntityTable
                   title="광고그룹"
                   fetchPage={(p) => listAdGroups(projectId, media, campaignId, { from, to, ...p })}
                   onRowClick={handleAdGroupClick}
                 />
-              </Paper>
+              </SectionCard>
             </>
           )}
         </Stack>

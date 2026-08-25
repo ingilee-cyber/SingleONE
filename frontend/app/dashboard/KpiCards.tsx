@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Box, Button, Card, CardContent, Checkbox, FormControlLabel, Menu, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, Button, Checkbox, FormControlLabel, Menu, Stack } from "@mui/material";
 import type { ProjectTotals } from "@/lib/dashboardApi";
 import { fmt as formatNumber, fmtPercent as formatPercent } from "@/lib/format";
+import StatCard from "@/app/components/common/StatCard";
 
 type KpiKey = "cost" | "impressions" | "clicks" | "purchases" | "revenue" | "roas";
 
@@ -119,40 +120,33 @@ export default function KpiCards({ totals, previousTotals, comparePrevious }: Kp
           ))}
         </Menu>
       </Stack>
-      <Stack data-testid="kpi-cards" direction="row" spacing={2} flexWrap="wrap">
+      <Box
+        data-testid="kpi-cards"
+        sx={{
+          display: "grid",
+          gap: 2,
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "repeat(2, 1fr)",
+            md: "repeat(3, 1fr)",
+            lg: `repeat(${KPI_KEYS.filter((key) => visible.includes(key)).length}, 1fr)`,
+          },
+        }}
+      >
         {KPI_KEYS.filter((key) => visible.includes(key)).map((key) => {
           const card = cards[key];
           return (
-            <Card key={key} sx={{ minWidth: 180 }}>
-              <CardContent>
-                <Stack direction="row" spacing={0.5} alignItems="center">
-                  <Typography variant="body2" color="text.secondary">
-                    {card.title}
-                  </Typography>
-                  {card.info && (
-                    <Tooltip title={card.info}>
-                      <Typography variant="body2" color="text.secondary" component="span">
-                        ⓘ
-                      </Typography>
-                    </Tooltip>
-                  )}
-                </Stack>
-                <Typography variant="h6">{card.primary}</Typography>
-                {card.secondary && (
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    {card.secondary}
-                  </Typography>
-                )}
-                {card.change && (
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    {card.change}
-                  </Typography>
-                )}
-              </CardContent>
-            </Card>
+            <StatCard
+              key={key}
+              label={card.title}
+              primary={card.primary}
+              secondary={card.secondary}
+              info={card.info}
+              change={card.change}
+            />
           );
         })}
-      </Stack>
+      </Box>
     </Box>
   );
 }

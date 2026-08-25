@@ -1,11 +1,13 @@
 "use client";
 
-import { Alert, Box, Chip, Stack, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, Chip, Stack } from "@mui/material";
 import EChart from "./EChart";
 import { INDEX_STATUS_LABEL, type MediaIndexResult } from "@/lib/dashboardApi";
 import type { Media } from "@/lib/projectApi";
+import { mediaColor } from "@/lib/mediaColors";
 
-const INDEX_TOOLTIP =
+export const MEDIA_INDEX_CHART_TITLE = "매체별 SingleONE Index";
+export const MEDIA_INDEX_CHART_INFO =
   "비교 프로젝트 내 유효 매체들의 비용 대비 광고 효율 평균을 100으로 환산한 상대 효율 점수입니다. " +
   "100보다 높을수록 비교 대상 매체 평균보다 상대적으로 높은 효율을 의미합니다.";
 
@@ -26,28 +28,20 @@ export default function MediaIndexChart({ results, onMediaClick }: MediaIndexCha
     series: [
       {
         type: "bar",
-        data: validResults.map((r) => Math.round(r.indexScore as number)),
-        itemStyle: { color: "#1976d2" },
+        data: validResults.map((r) => ({
+          value: Math.round(r.indexScore as number),
+          itemStyle: { color: mediaColor(r.media) },
+        })),
       },
     ],
   };
 
   return (
     <Box>
-      <Stack direction="row" spacing={0.5} alignItems="center">
-        <Typography variant="h6">매체별 SingleONE Index</Typography>
-        <Tooltip title={INDEX_TOOLTIP}>
-          <Typography component="span" color="text.secondary">
-            ⓘ
-          </Typography>
-        </Tooltip>
-      </Stack>
       {validResults.length > 0 ? (
         <EChart option={option} onClickCategory={(name) => onMediaClick(name as Media)} />
       ) : (
-        <Alert severity="info" sx={{ mt: 2 }}>
-          Index를 계산할 수 있는 매체가 없습니다.
-        </Alert>
+        <Alert severity="info">Index를 계산할 수 있는 매체가 없습니다.</Alert>
       )}
       {invalidResults.length > 0 && (
         <Stack direction="row" spacing={1} sx={{ mt: 2 }} flexWrap="wrap">

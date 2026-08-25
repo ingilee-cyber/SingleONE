@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { Alert, Box, CircularProgress, Container, Paper, Stack, Typography } from "@mui/material";
+import { Alert, Box, CircularProgress, Container, Stack } from "@mui/material";
 import { getAdDetail } from "@/lib/detailApi";
 import type { EntityPerformance } from "@/lib/detailApi";
 import type { Media } from "@/lib/projectApi";
 import Breadcrumb from "@/app/detail/Breadcrumb";
 import PerformanceSummary from "@/app/detail/PerformanceSummary";
+import PageHeader from "@/app/components/common/PageHeader";
+import SectionCard from "@/app/components/common/SectionCard";
 
 /** PRD 7.5 광고 상세: 원본+SingleONE 성과만(Index/이전 기간/하위 목록 없음). */
 export default function AdDetailPage() {
@@ -71,9 +73,7 @@ export default function AdDetailPage() {
               { label: `광고: ${detail?.name ?? adId}` },
             ]}
           />
-          <Typography variant="h4" component="h1">
-            광고 상세: {detail?.name ?? adId}
-          </Typography>
+          <PageHeader title={`광고 상세: ${detail?.name ?? adId}`} />
 
           {loading && (
             <Stack alignItems="center" sx={{ py: 6 }}>
@@ -83,9 +83,9 @@ export default function AdDetailPage() {
           {error && <Alert severity="error">{error}</Alert>}
 
           {!loading && !error && detail && (
-            <Paper sx={{ p: 3 }}>
+            <SectionCard>
               <PerformanceSummary current={detail} />
-            </Paper>
+            </SectionCard>
           )}
         </Stack>
       </Box>

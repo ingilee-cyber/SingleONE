@@ -1,8 +1,9 @@
 "use client";
 
-import { Alert, Chip, Paper, Stack, Table, TableBody, TableCell, TableRow, Tooltip, Typography } from "@mui/material";
+import { Alert, Box, Chip, Paper, Stack, Table, TableBody, TableCell, TableRow, Tooltip, Typography } from "@mui/material";
 import { fmt, fmtPercent } from "@/lib/format";
 import type { ConfidenceLevel, MediaSimulationResult } from "@/lib/simulationApi";
+import { mediaColor } from "@/lib/mediaColors";
 import MarginalEfficiencyChart from "./MarginalEfficiencyChart";
 
 // PRD 10.3 화면 Tooltip 문구(그대로 사용).
@@ -29,9 +30,12 @@ export default function MediaResultTable({ mediaResults }: { mediaResults: Media
   return (
     <Stack spacing={2}>
       {mediaResults.map((result) => (
-        <Paper key={result.media} variant="outlined" sx={{ p: 2 }}>
+        <Paper key={result.media} variant="outlined" sx={{ p: 2, borderTop: 3, borderTopColor: mediaColor(result.media) }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-            <Typography variant="h6">{result.media}</Typography>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Box sx={{ width: 10, height: 10, borderRadius: "50%", bgcolor: mediaColor(result.media) }} />
+              <Typography variant="h6">{result.media}</Typography>
+            </Stack>
             <ConfidenceChip confidence={result.confidence} />
           </Stack>
           <Table size="small">

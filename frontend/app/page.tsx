@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Box, Chip, Container, Link as MuiLink, Stack, Typography } from "@mui/material";
+import { Box, Button, Chip, Container, Stack, Typography } from "@mui/material";
 import NextLink from "next/link";
 import apiClient from "@/lib/apiClient";
+
+const QUICK_LINKS = [
+  { href: "/uploads", label: "데이터 관리 화면으로 이동" },
+  { href: "/projects", label: "프로젝트 화면으로 이동" },
+  { href: "/dashboard", label: "Dashboard 화면으로 이동" },
+  { href: "/journey", label: "Journey & Attribution 화면으로 이동" },
+  { href: "/simulation", label: "Media Planning Simulation 화면으로 이동" },
+];
 
 type BackendStatus = "checking" | "connected" | "disconnected";
 
@@ -62,21 +70,19 @@ export default function Home() {
               size="small"
             />
           </Stack>
-          <MuiLink component={NextLink} href="/uploads">
-            데이터 관리 화면으로 이동
-          </MuiLink>
-          <MuiLink component={NextLink} href="/projects">
-            프로젝트 화면으로 이동
-          </MuiLink>
-          <MuiLink component={NextLink} href="/dashboard">
-            Dashboard 화면으로 이동
-          </MuiLink>
-          <MuiLink component={NextLink} href="/journey">
-            Journey & Attribution 화면으로 이동
-          </MuiLink>
-          <MuiLink component={NextLink} href="/simulation">
-            Media Planning Simulation 화면으로 이동
-          </MuiLink>
+          <Stack spacing={1}>
+            {QUICK_LINKS.map((link) => (
+              <Button
+                key={link.href}
+                component={NextLink}
+                href={link.href}
+                variant="outlined"
+                sx={{ justifyContent: "flex-start" }}
+              >
+                {link.label}
+              </Button>
+            ))}
+          </Stack>
         </Stack>
       </Box>
     </Container>

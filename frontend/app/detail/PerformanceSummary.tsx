@@ -2,6 +2,7 @@
 
 import { Box, Card, CardContent, Chip, Stack, Tooltip, Typography } from "@mui/material";
 import { fmt, fmtPercent } from "@/lib/format";
+import StatCard from "@/app/components/common/StatCard";
 import {
   INDEX_STATUS_LABEL,
   type MediaIndexResult,
@@ -30,26 +31,9 @@ interface PerformanceSummaryProps {
 
 function Metric({ label, primary, secondary, info }: { label: string; primary: string; secondary?: string; info?: string }) {
   return (
-    <Stack spacing={0.5} sx={{ minWidth: 160 }}>
-      <Stack direction="row" spacing={0.5} alignItems="center">
-        <Typography variant="body2" color="text.secondary">
-          {label}
-        </Typography>
-        {info && (
-          <Tooltip title={info}>
-            <Typography variant="body2" color="text.secondary" component="span">
-              ⓘ
-            </Typography>
-          </Tooltip>
-        )}
-      </Stack>
-      <Typography variant="h6">{primary}</Typography>
-      {secondary && (
-        <Typography variant="caption" color="text.secondary">
-          {secondary}
-        </Typography>
-      )}
-    </Stack>
+    <Box sx={{ minWidth: 160 }}>
+      <StatCard bare label={label} primary={primary} secondary={secondary} info={info} />
+    </Box>
   );
 }
 
