@@ -58,3 +58,6 @@ docker-compose.override.yml
 # --- Misc build artifacts ---
 *.tmp
 .cache/
+
+# --- Test data generator stress output (never committed, regenerate with --stress) ---
+test-data/demo-full/stress/

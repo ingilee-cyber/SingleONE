@@ -1,0 +1,15 @@
+{
+  "name": "singleone-demo-data-generator",
+  "private": true,
+  "version": "1.0.0",
+  "description": "SingleONE 종합 테스트 데이터(test-data/demo-full/) 생성 전용 도구. 제품 코드와 완전히 분리되어 있으며, 여기서 추가한 의존성은 Frontend/Backend 어디에도 영향을 주지 않는다.",
+  "type": "module",
+  "scripts": {
+    "generate": "node generate.mjs",
+    "validate": "node validate.mjs",
+    "seed": "node seed.mjs"
+  },
+  "devDependencies": {
+    "write-excel-file": "^4.1.1"
+  }
+}

@@ -1,0 +1,3 @@
+event_id,anonymous_user_id,advertiser_id,event_type,event_timestamp,media,campaign_id,ad_group_id,ad_id,order_id,purchase_revenue
+FIX-E001,FIX-U001,aurora-beauty,CLICK,2026-05-01T10:00:00Z,META,AUR-META-ALW-C01,,,,
+FIX-E001,FIX-U001,aurora-beauty,CLICK,2026-05-01T11:00:00Z,META,AUR-META-ALW-C01,,,,

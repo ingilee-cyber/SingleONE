@@ -1,0 +1,426 @@
+{
+  "projects": [
+    {
+      "advertiserId": "aurora-beauty",
+      "projectName": "상시",
+      "campaigns": [
+        {
+          "media": "META",
+          "campaignId": "AUR-META-ALW-C01"
+        },
+        {
+          "media": "META",
+          "campaignId": "AUR-META-ALW-C02"
+        },
+        {
+          "media": "META",
+          "campaignId": "AUR-META-ALW-C03"
+        },
+        {
+          "media": "META",
+          "campaignId": "AUR-META-ALW-C04"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "AUR-TIKTOK-ALW-C01"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "AUR-TIKTOK-ALW-C02"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "AUR-GOOGLE-ALW-C01"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "AUR-GOOGLE-ALW-C02"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "AUR-NAVER-ALW-C01"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "AUR-NAVER-ALW-C02"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "AUR-CRITEO-ALW-C01"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "AUR-CRITEO-ALW-C02"
+        }
+      ]
+    },
+    {
+      "advertiserId": "aurora-beauty",
+      "projectName": "프로모션(7월)",
+      "campaigns": [
+        {
+          "media": "META",
+          "campaignId": "AUR-META-P07-C01"
+        },
+        {
+          "media": "META",
+          "campaignId": "AUR-META-P07-C02"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "AUR-TIKTOK-P07-C01"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "AUR-TIKTOK-P07-C02"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "AUR-GOOGLE-P07-C01"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "AUR-GOOGLE-P07-C02"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "AUR-NAVER-P07-C01"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "AUR-NAVER-P07-C02"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "AUR-CRITEO-P07-C01"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "AUR-CRITEO-P07-C02"
+        }
+      ]
+    },
+    {
+      "advertiserId": "aurora-beauty",
+      "projectName": "프로모션(8월)",
+      "campaigns": [
+        {
+          "media": "META",
+          "campaignId": "AUR-META-P08-C01"
+        },
+        {
+          "media": "META",
+          "campaignId": "AUR-META-P08-C02"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "AUR-TIKTOK-P08-C01"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "AUR-TIKTOK-P08-C02"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "AUR-GOOGLE-P08-C01"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "AUR-GOOGLE-P08-C02"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "AUR-NAVER-P08-C01"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "AUR-NAVER-P08-C02"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "AUR-CRITEO-P08-C01"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "AUR-CRITEO-P08-C02"
+        }
+      ]
+    },
+    {
+      "advertiserId": "urban-fit",
+      "projectName": "상시",
+      "campaigns": [
+        {
+          "media": "META",
+          "campaignId": "URB-META-ALW-C01"
+        },
+        {
+          "media": "META",
+          "campaignId": "URB-META-ALW-C02"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "URB-TIKTOK-ALW-C01"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "URB-TIKTOK-ALW-C02"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "URB-GOOGLE-ALW-C01"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "URB-GOOGLE-ALW-C02"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "URB-NAVER-ALW-C01"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "URB-NAVER-ALW-C02"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "URB-CRITEO-ALW-C01"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "URB-CRITEO-ALW-C02"
+        }
+      ]
+    },
+    {
+      "advertiserId": "urban-fit",
+      "projectName": "프로모션(7월)",
+      "campaigns": [
+        {
+          "media": "META",
+          "campaignId": "URB-META-P07-C01"
+        },
+        {
+          "media": "META",
+          "campaignId": "URB-META-P07-C02"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "URB-TIKTOK-P07-C01"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "URB-TIKTOK-P07-C02"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "URB-GOOGLE-P07-C01"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "URB-GOOGLE-P07-C02"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "URB-NAVER-P07-C01"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "URB-NAVER-P07-C02"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "URB-CRITEO-P07-C01"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "URB-CRITEO-P07-C02"
+        }
+      ]
+    },
+    {
+      "advertiserId": "urban-fit",
+      "projectName": "프로모션(8월)",
+      "campaigns": [
+        {
+          "media": "META",
+          "campaignId": "URB-META-P08-C01"
+        },
+        {
+          "media": "META",
+          "campaignId": "URB-META-P08-C02"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "URB-TIKTOK-P08-C01"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "URB-TIKTOK-P08-C02"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "URB-GOOGLE-P08-C01"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "URB-GOOGLE-P08-C02"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "URB-NAVER-P08-C01"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "URB-NAVER-P08-C02"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "URB-CRITEO-P08-C01"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "URB-CRITEO-P08-C02"
+        }
+      ]
+    },
+    {
+      "advertiserId": "living-lab",
+      "projectName": "상시",
+      "campaigns": [
+        {
+          "media": "META",
+          "campaignId": "LIV-META-ALW-C01"
+        },
+        {
+          "media": "META",
+          "campaignId": "LIV-META-ALW-C02"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "LIV-TIKTOK-ALW-C01"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "LIV-TIKTOK-ALW-C02"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "LIV-GOOGLE-ALW-C01"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "LIV-GOOGLE-ALW-C02"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "LIV-NAVER-ALW-C01"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "LIV-NAVER-ALW-C02"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "LIV-CRITEO-ALW-C01"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "LIV-CRITEO-ALW-C02"
+        }
+      ]
+    },
+    {
+      "advertiserId": "living-lab",
+      "projectName": "프로모션(7월)",
+      "campaigns": [
+        {
+          "media": "META",
+          "campaignId": "LIV-META-P07-C01"
+        },
+        {
+          "media": "META",
+          "campaignId": "LIV-META-P07-C02"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "LIV-TIKTOK-P07-C01"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "LIV-TIKTOK-P07-C02"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "LIV-GOOGLE-P07-C01"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "LIV-GOOGLE-P07-C02"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "LIV-NAVER-P07-C01"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "LIV-NAVER-P07-C02"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "LIV-CRITEO-P07-C01"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "LIV-CRITEO-P07-C02"
+        }
+      ]
+    },
+    {
+      "advertiserId": "living-lab",
+      "projectName": "프로모션(8월)",
+      "campaigns": [
+        {
+          "media": "META",
+          "campaignId": "LIV-META-P08-C01"
+        },
+        {
+          "media": "META",
+          "campaignId": "LIV-META-P08-C02"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "LIV-TIKTOK-P08-C01"
+        },
+        {
+          "media": "TIKTOK",
+          "campaignId": "LIV-TIKTOK-P08-C02"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "LIV-GOOGLE-P08-C01"
+        },
+        {
+          "media": "GOOGLE",
+          "campaignId": "LIV-GOOGLE-P08-C02"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "LIV-NAVER-P08-C01"
+        },
+        {
+          "media": "NAVER",
+          "campaignId": "LIV-NAVER-P08-C02"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "LIV-CRITEO-P08-C01"
+        },
+        {
+          "media": "CRITEO",
+          "campaignId": "LIV-CRITEO-P08-C02"
+        }
+      ]
+    }
+  ]
+}

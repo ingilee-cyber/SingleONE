@@ -1,0 +1,69 @@
+{
+  "seed": 20260826,
+  "dateRange": ["2026-05-01", "2026-08-25"],
+  "generatedBy": "test-data/generator/generate.mjs (deterministic, seed 20260826 재실행 시 100% 동일 산출물)",
+  "totals": {
+    "performanceRows": 30864,
+    "journeyEvents": 16683,
+    "advertisers": 3,
+    "projectsPerAdvertiser": 3
+  },
+  "advertisers": [
+    {
+      "advertiserId": "aurora-beauty",
+      "advertiserName": "오로라뷰티",
+      "summary": "Meta/TikTok 성과가 상대적으로 강하고 프로모션 반응이 큰 뷰티 브랜드. '상시' 프로젝트는 5개 매체 모두 SingleONE Index가 정상(VALID) 계산되고, Media Planning Simulation도 3개 매체(META/TIKTOK/GOOGLE)가 HIGH confidence로 예측 가능한 대표 시연용(flagship) 광고주.",
+      "performanceRowCount": 11448,
+      "journeyEventCount": 5494,
+      "projects": ["상시", "프로모션(7월)", "프로모션(8월)"]
+    },
+    {
+      "advertiserId": "urban-fit",
+      "advertiserName": "어반핏",
+      "summary": "Google/Meta 성과가 상대적으로 강한 피트니스 브랜드. 모든 매체가 ORGANIC(정상) 패턴으로, 극단적 Edge Case 없이 '평범한 광고주'의 기준점 역할을 한다.",
+      "performanceRowCount": 10380,
+      "journeyEventCount": 5246,
+      "projects": ["상시", "프로모션(7월)", "프로모션(8월)"]
+    },
+    {
+      "advertiserId": "living-lab",
+      "advertiserName": "리빙랩",
+      "summary": "Naver/Criteo 비중이 높은 리빙 브랜드. SingleONE Index 데이터 부족 Edge Case(B/C/D/E)를 의도적으로 배치했다 — 자세한 매체별 결과는 EXPECTED_BEHAVIOR.md 참고.",
+      "performanceRowCount": 9036,
+      "journeyEventCount": 5943,
+      "projects": ["상시", "프로모션(7월)", "프로모션(8월)"]
+    }
+  ],
+  "files": {
+    "performance": ["performance/performance_aurora-beauty.csv", "performance/performance_urban-fit.csv", "performance/performance_living-lab.csv"],
+    "journey": ["journey/journey_aurora-beauty.csv", "journey/journey_urban-fit.csv", "journey/journey_living-lab.csv"],
+    "projects": ["projects/projects.json"],
+    "xlsx": ["xlsx/performance_valid.xlsx", "xlsx/journey_valid.xlsx", "xlsx/xlsx_first_sheet_only_test.xlsx"],
+    "invalidUpload": [
+      "invalid-upload/performance_missing_required_column.csv",
+      "invalid-upload/performance_invalid_date.csv",
+      "invalid-upload/performance_negative_cost.csv",
+      "invalid-upload/performance_non_numeric.csv",
+      "invalid-upload/performance_unsupported_media.csv",
+      "invalid-upload/performance_duplicate_inside_file.csv",
+      "invalid-upload/performance_duplicate_existing_data.csv",
+      "invalid-upload/journey_duplicate_event_id.csv",
+      "invalid-upload/journey_duplicate_order_id.csv",
+      "invalid-upload/journey_invalid_event_type.csv",
+      "invalid-upload/journey_missing_user_id.csv"
+    ]
+  },
+  "verifiedAgainstRunningBackend": {
+    "date": "2026-08-26",
+    "seedMjsFullRun": "SUCCESS (3개 광고주 전부 Performance/Journey 업로드 SUCCESS, 프로젝트 9개 생성 확인)",
+    "dashboardIndexStatus": {
+      "aurora-beauty/상시": "META/TIKTOK/GOOGLE/NAVER/CRITEO 전부 VALID",
+      "living-lab/상시": "NAVER/CRITEO VALID, META/TIKTOK/GOOGLE INSUFFICIENT_DATA",
+      "living-lab/프로모션(8월)": "NAVER/CRITEO/META/GOOGLE VALID, TIKTOK INSUFFICIENT_DATA"
+    },
+    "simulationConfidence": {
+      "aurora-beauty/상시": "META/TIKTOK/GOOGLE HIGH, NAVER/CRITEO UNAVAILABLE(데이터 부족)"
+    },
+    "invalidUploadFixtures": "11개 중 10개는 의도한 오류 코드 그대로 재현 확인(FAILED). performance_duplicate_existing_data.csv는 DUPLICATE_CONFIRMATION_REQUIRED 확인, confirm/cancel 두 경로 모두 확인. journey_duplicate_order_id.csv는 EXPECTED_BEHAVIOR.md의 '알려진 이슈' 참고."
+  }
+}
