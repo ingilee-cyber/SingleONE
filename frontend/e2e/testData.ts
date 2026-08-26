@@ -1,6 +1,19 @@
-import type { APIRequestContext } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 
 export const BACKEND_URL = "http://localhost:8080";
+
+/**
+ * Global Header의 광고주 Autocomplete에서 특정 광고주를 선택한다. 페이지는 이미
+ * `page.goto(...)`로 진입해 AppShell이 마운트되고 광고주 목록을 불러온 상태여야 한다.
+ * (전역 광고주 선택 도입 후 각 화면의 "광고주 ID" 텍스트박스는 데이터 관리 화면을 제외하고
+ * 전부 제거됐다.)
+ */
+export async function selectAdvertiser(page: Page, advertiserId: string) {
+  const input = page.getByRole("combobox", { name: "광고주" });
+  await input.click();
+  await input.fill(advertiserId);
+  await page.getByRole("option", { name: advertiserId, exact: true }).click();
+}
 
 export async function uploadPerformanceCsv(request: APIRequestContext, advertiserId: string, csv: string, filename = "perf.csv") {
   const res = await request.post(`${BACKEND_URL}/api/v1/uploads/performance`, {

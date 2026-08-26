@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SimulationPage from "./page";
 import { useSimulationStore } from "./simulationStore";
+import { useAdvertiserStore } from "@/lib/advertiserStore";
 import * as projectApi from "@/lib/projectApi";
 import * as simulationApi from "@/lib/simulationApi";
 import type { SimulationResult } from "@/lib/simulationApi";
@@ -75,7 +76,6 @@ const result: SimulationResult = {
 describe("SimulationPage", () => {
   beforeEach(() => {
     useSimulationStore.setState({
-      advertiserId: "",
       projectId: "",
       baseFrom: "",
       baseTo: "",
@@ -86,6 +86,13 @@ describe("SimulationPage", () => {
       loading: false,
       error: null,
     });
+    useAdvertiserStore.setState({
+      advertisers: [{ advertiserId: "adv-1", advertiserName: "adv-1" }],
+      selectedAdvertiserId: "adv-1",
+      loading: false,
+      error: null,
+      loaded: true,
+    });
     mockSearchParams.mockReturnValue(new URLSearchParams());
     vi.mocked(projectApi.listProjects).mockResolvedValue([userProject, systemProject]);
     vi.mocked(simulationApi.postSimulation).mockResolvedValue(result);
@@ -93,7 +100,6 @@ describe("SimulationPage", () => {
 
   it("excludes the system default project from the selectable list", async () => {
     render(<SimulationPage />);
-    fireEvent.change(screen.getByRole("textbox", { name: "광고주 ID" }), { target: { value: "adv-1" } });
 
     await screen.findByLabelText("META");
     expect(screen.queryByText("전체 캠페인")).not.toBeInTheDocument();
@@ -101,7 +107,6 @@ describe("SimulationPage", () => {
 
   it("runs the simulation and shows the media result and disclaimer", async () => {
     render(<SimulationPage />);
-    fireEvent.change(screen.getByRole("textbox", { name: "광고주 ID" }), { target: { value: "adv-1" } });
     await screen.findByLabelText("META");
 
     fireEvent.change(screen.getByLabelText("META"), { target: { value: "2000000" } });
@@ -119,7 +124,6 @@ describe("SimulationPage", () => {
   // AC-43 보강: 결과가 채워진 뒤(백엔드 notes 등 자유 텍스트가 실제로 렌더링된 상태)에도 금지 표현이 없어야 한다.
   it("AC-43: still shows no recommendation/optimization wording after a simulation result is rendered", async () => {
     render(<SimulationPage />);
-    fireEvent.change(screen.getByRole("textbox", { name: "광고주 ID" }), { target: { value: "adv-1" } });
     await screen.findByLabelText("META");
 
     fireEvent.change(screen.getByLabelText("META"), { target: { value: "2000000" } });
@@ -143,7 +147,6 @@ describe("SimulationPage", () => {
     });
 
     render(<SimulationPage />);
-    fireEvent.change(screen.getByRole("textbox", { name: "광고주 ID" }), { target: { value: "adv-1" } });
     await screen.findByLabelText("META");
     fireEvent.change(screen.getByLabelText("META"), { target: { value: "6000000" } });
     fireEvent.click(screen.getByRole("button", { name: "시뮬레이션 실행" }));
@@ -155,7 +158,6 @@ describe("SimulationPage", () => {
   // AC-53: Simulation 상태는 DB/LocalStorage에 남지 않고 Zustand 메모리에만 있어야 한다.
   it("AC-53: never writes simulation input/result to localStorage or sessionStorage", async () => {
     render(<SimulationPage />);
-    fireEvent.change(screen.getByRole("textbox", { name: "광고주 ID" }), { target: { value: "adv-1" } });
     await screen.findByLabelText("META");
     fireEvent.change(screen.getByLabelText("META"), { target: { value: "2000000" } });
     fireEvent.click(screen.getByRole("button", { name: "시뮬레이션 실행" }));

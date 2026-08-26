@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { buildPerformanceCsv, createProject, uploadPerformanceCsv, waitForUploadStatus } from "./testData";
+import { buildPerformanceCsv, createProject, selectAdvertiser, uploadPerformanceCsv, waitForUploadStatus } from "./testData";
 
 /**
  * PRD 6장/7장 골든 패스: 업로드 -> 프로젝트 생성 -> Dashboard 기본 진입(AC-01) -> 매체 클릭 ->
@@ -41,7 +41,7 @@ test.describe("Dashboard & 상세 계층 골든 패스", () => {
     expect(projectId).toBeGreaterThan(0);
 
     await page.goto("/dashboard", { timeout: 60000 });
-    await page.getByRole("textbox", { name: "광고주 ID" }).fill(advertiserId);
+    await selectAdvertiser(page, advertiserId);
 
     // AC-01: 기본 기간은 최근 30일, 이전 기간 비교는 ON이어야 한다.
     await expect(page.getByRole("button", { name: "최근 30일" })).toHaveAttribute("aria-pressed", "true", { timeout: 15000 });
@@ -62,8 +62,9 @@ test.describe("Dashboard & 상세 계층 골든 패스", () => {
     await page.getByRole("heading", { name: "매체 상세: GOOGLE" }).waitFor({ timeout: 45000 });
     await page.getByRole("link", { name: "Dashboard" }).click();
 
-    // AC-23: Dashboard로 돌아왔을 때 광고주/프로젝트/기간 상태가 유지돼야 한다.
+    // AC-23: Dashboard로 돌아왔을 때 프로젝트/기간 상태가 유지돼야 한다(광고주는 전역
+    // Header 선택값이라 화면 이동과 무관하게 항상 유지된다).
     await page.getByTestId("kpi-cards").waitFor({ timeout: 45000 });
-    await expect(page.getByRole("textbox", { name: "광고주 ID" })).toHaveValue(advertiserId);
+    await expect(page.getByRole("combobox", { name: "광고주" })).toHaveValue(advertiserId);
   });
 });

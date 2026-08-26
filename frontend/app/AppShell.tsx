@@ -1,9 +1,12 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import NextLink from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode, SVGProps } from "react";
+import AdvertiserSelector from "./components/common/AdvertiserSelector";
+import { useAdvertiserStore } from "@/lib/advertiserStore";
 
 const SIDEBAR_WIDTH = 88;
 const TOPBAR_HEIGHT = 56;
@@ -89,12 +92,27 @@ const NAV_ITEMS: { href: string; label: string; icon: (props: SVGProps<SVGSVGEle
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const selectedAdvertiserId = useAdvertiserStore((s) => s.selectedAdvertiserId);
+  const previousAdvertiserIdRef = useRef(selectedAdvertiserId);
+
+  // 매체/캠페인/광고그룹/광고 상세 화면은 특정 프로젝트의 하위 캠페인/광고그룹/광고를 보여주는
+  // 화면이라, 광고주가 바뀌면 그 값들이 새 광고주에 존재하지 않을 게 거의 확실하다. 상세 화면에
+  // 머무는 중 광고주가 바뀌면 Dashboard로 돌려보낸다(최초 마운트 시에는 발동하지 않는다).
+  useEffect(() => {
+    const changed = previousAdvertiserIdRef.current !== selectedAdvertiserId;
+    previousAdvertiserIdRef.current = selectedAdvertiserId;
+    if (changed && pathname.startsWith("/dashboard/media/")) {
+      router.push("/dashboard");
+    }
+  }, [selectedAdvertiserId, pathname, router]);
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "#F5F6F9" }}>
       <Stack
         direction="row"
         alignItems="center"
+        justifyContent="space-between"
         spacing={1}
         sx={{
           height: TOPBAR_HEIGHT,
@@ -106,10 +124,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
           zIndex: 10,
         }}
       >
-        <LogoMark />
-        <Typography variant="subtitle1" component="span" sx={{ fontWeight: 700 }}>
-          SingleONE
-        </Typography>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <LogoMark />
+          <Typography variant="subtitle1" component="span" sx={{ fontWeight: 700 }}>
+            SingleONE
+          </Typography>
+        </Stack>
+        <AdvertiserSelector />
       </Stack>
 
       <Stack direction="row" alignItems="stretch">

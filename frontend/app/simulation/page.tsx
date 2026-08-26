@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import {
   Alert,
   Box,
@@ -18,6 +17,7 @@ import {
 import { listProjects, type Media, type Project } from "@/lib/projectApi";
 import { PERIOD_OPTIONS, computeRange, toISODate, type PeriodPreset } from "@/lib/period";
 import { fmt, fmtPercent } from "@/lib/format";
+import { useAdvertiserStore } from "@/lib/advertiserStore";
 import PageHeader from "@/app/components/common/PageHeader";
 import FilterPanel from "@/app/components/common/FilterPanel";
 import SectionCard from "@/app/components/common/SectionCard";
@@ -84,7 +84,7 @@ function PeriodPicker({
 }
 
 function SimulationPageContent() {
-  const initialParams = useSearchParams();
+  const advertiserId = useAdvertiserStore((s) => s.selectedAdvertiserId);
   const store = useSimulationStore();
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -98,19 +98,11 @@ function SimulationPageContent() {
   const [simCustomTo, setSimCustomTo] = useState(() => toISODate(new Date()));
 
   useEffect(() => {
-    const advertiserId = initialParams.get("advertiserId");
-    if (advertiserId) {
-      store.setAdvertiserId(advertiserId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (!store.advertiserId) {
+    if (!advertiserId) {
       setProjects([]);
       return;
     }
-    listProjects(store.advertiserId)
+    listProjects(advertiserId)
       .then((data) => {
         // PRD 10.2/AC-22: 시스템 "전체 캠페인" 프로젝트는 Simulation에서 아예 선택할 수 없다.
         const selectable = data.filter((p) => !p.systemDefault);
@@ -122,7 +114,7 @@ function SimulationPageContent() {
       })
       .catch(() => setProjectsError("프로젝트 목록을 불러오지 못했습니다."));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store.advertiserId]);
+  }, [advertiserId]);
 
   useEffect(() => {
     const { from, to } = computeRange(basePreset, baseCustomFrom, baseCustomTo);
@@ -159,33 +151,24 @@ function SimulationPageContent() {
           </Alert>
 
           <FilterPanel>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                <TextField
-                  label="광고주 ID"
-                  value={store.advertiserId}
-                  onChange={(e) => store.setAdvertiserId(e.target.value)}
-                  size="small"
-                  fullWidth
-                />
-                <TextField
-                  select
-                  label="프로젝트"
-                  value={store.projectId}
-                  onChange={(e) => store.setProjectId(e.target.value === "" ? "" : Number(e.target.value))}
-                  size="small"
-                  fullWidth
-                  disabled={projects.length === 0}
-                  helperText="전체 캠페인 프로젝트는 선택할 수 없습니다."
-                >
-                  {projects.map((project) => (
-                    <MenuItem key={project.projectId} value={project.projectId}>
-                      {project.projectName}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Stack>
+              <TextField
+                select
+                label="프로젝트"
+                value={store.projectId}
+                onChange={(e) => store.setProjectId(e.target.value === "" ? "" : Number(e.target.value))}
+                size="small"
+                sx={{ maxWidth: 360 }}
+                disabled={projects.length === 0}
+                helperText="전체 캠페인 프로젝트는 선택할 수 없습니다."
+              >
+                {projects.map((project) => (
+                  <MenuItem key={project.projectId} value={project.projectId}>
+                    {project.projectName}
+                  </MenuItem>
+                ))}
+              </TextField>
               {projectsError && <Alert severity="error">{projectsError}</Alert>}
-              {store.advertiserId && projects.length === 0 && !projectsError && (
+              {advertiserId && projects.length === 0 && !projectsError && (
                 <Alert severity="info">선택 가능한 프로젝트가 없습니다(전체 캠페인 프로젝트는 제외됩니다).</Alert>
               )}
 

@@ -18,6 +18,7 @@ import {
 import { getDashboard, type DashboardResponse } from "@/lib/dashboardApi";
 import { listProjects, type Media, type Project } from "@/lib/projectApi";
 import { PERIOD_OPTIONS, computeRange, toISODate, type PeriodPreset } from "@/lib/period";
+import { useAdvertiserStore } from "@/lib/advertiserStore";
 import PageHeader from "@/app/components/common/PageHeader";
 import FilterPanel from "@/app/components/common/FilterPanel";
 import SectionCard from "@/app/components/common/SectionCard";
@@ -38,11 +39,12 @@ export default function DashboardPage() {
 
 function DashboardPageContent() {
   const router = useRouter();
-  // AC-23: 상세 화면에서 Breadcrumb으로 Dashboard에 돌아왔을 때 광고주/프로젝트/기간/이전 기간
-  // 비교 상태를 복원한다(상세 화면 이동 시 이 값들을 query string으로 넘겨둠).
+  // AC-23: 상세 화면에서 Breadcrumb으로 Dashboard에 돌아왔을 때 프로젝트/기간/이전 기간 비교
+  // 상태를 복원한다(상세 화면 이동 시 이 값들을 query string으로 넘겨둠). 광고주는 전역 Header
+  // 선택값을 Source of Truth로 쓰므로 URL로 넘기지 않는다.
   const initialParams = useSearchParams();
 
-  const [advertiserId, setAdvertiserId] = useState(() => initialParams.get("advertiserId") ?? "");
+  const advertiserId = useAdvertiserStore((s) => s.selectedAdvertiserId);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<number | "">(() => {
     const raw = initialParams.get("projectId");
@@ -100,7 +102,6 @@ function DashboardPageContent() {
 
   const handleMediaClick = (media: Media) => {
     const query = new URLSearchParams({
-      advertiserId,
       projectId: String(selectedProjectId),
       from,
       to,
@@ -110,20 +111,13 @@ function DashboardPageContent() {
   };
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth="xl">
       <Box sx={{ py: 6 }}>
         <Stack spacing={4}>
           <PageHeader title="Dashboard" />
 
           <FilterPanel>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <TextField
-                label="광고주 ID"
-                value={advertiserId}
-                onChange={(e) => setAdvertiserId(e.target.value)}
-                size="small"
-                fullWidth
-              />
               <TextField
                 select
                 label="프로젝트"
@@ -181,7 +175,7 @@ function DashboardPageContent() {
             {projectsError && <Alert severity="error">{projectsError}</Alert>}
           </FilterPanel>
 
-          {!advertiserId && <Alert severity="info">광고주 ID를 입력하세요.</Alert>}
+          {!advertiserId && <Alert severity="info">등록된 광고주가 없습니다. 데이터 관리에서 먼저 데이터를 업로드하세요.</Alert>}
           {advertiserId && projects.length === 0 && !projectsError && (
             <Alert severity="info">이 광고주에는 아직 프로젝트가 없습니다. 먼저 데이터를 업로드하세요.</Alert>
           )}
@@ -203,26 +197,38 @@ function DashboardPageContent() {
                 previousTotals={comparePrevious ? dashboard.previousTotals : undefined}
                 comparePrevious={comparePrevious}
               />
-              <SectionCard title={MEDIA_INDEX_CHART_TITLE} info={MEDIA_INDEX_CHART_INFO}>
-                <MediaIndexChart results={dashboard.current} onMediaClick={handleMediaClick} />
-              </SectionCard>
+              <Box
+                sx={{
+                  display: "grid",
+                  gap: 3,
+                  gridTemplateColumns: { xs: "1fr", lg: "7fr 5fr" },
+                  alignItems: "stretch",
+                }}
+              >
+                <SectionCard title={MEDIA_INDEX_CHART_TITLE} info={MEDIA_INDEX_CHART_INFO}>
+                  <MediaIndexChart results={dashboard.current} onMediaClick={handleMediaClick} />
+                </SectionCard>
+                <SectionCard title={JOURNEY_SUMMARY_TITLE}>
+                  <JourneySummaryPlaceholder projectId={Number(selectedProjectId)} from={from} to={to} />
+                </SectionCard>
+              </Box>
               <SectionCard title="원본 + SingleONE 성과">
                 <PerformanceTable results={dashboard.current} />
               </SectionCard>
-              <SectionCard title={INDEX_BREAKDOWN_CHART_TITLE}>
-                <IndexBreakdownChart results={dashboard.current} />
-              </SectionCard>
-              <SectionCard title={ROLLING_INDEX_CHART_TITLE}>
-                <RollingIndexChart points={dashboard.rolling} />
-              </SectionCard>
-              <SectionCard title={JOURNEY_SUMMARY_TITLE}>
-                <JourneySummaryPlaceholder
-                  advertiserId={advertiserId}
-                  projectId={Number(selectedProjectId)}
-                  from={from}
-                  to={to}
-                />
-              </SectionCard>
+              <Box
+                sx={{
+                  display: "grid",
+                  gap: 3,
+                  gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" },
+                }}
+              >
+                <SectionCard title={INDEX_BREAKDOWN_CHART_TITLE}>
+                  <IndexBreakdownChart results={dashboard.current} />
+                </SectionCard>
+                <SectionCard title={ROLLING_INDEX_CHART_TITLE}>
+                  <RollingIndexChart points={dashboard.rolling} />
+                </SectionCard>
+              </Box>
             </Stack>
           )}
         </Stack>

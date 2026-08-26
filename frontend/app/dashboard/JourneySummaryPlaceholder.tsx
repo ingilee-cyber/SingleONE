@@ -9,14 +9,13 @@ import { getJourneyAnalysis, type JourneyAnalysisResult } from "@/lib/journeyApi
 export const JOURNEY_SUMMARY_TITLE = "Journey & Attribution 요약";
 
 interface JourneySummaryProps {
-  advertiserId: string;
   projectId: number;
   from: string;
   to: string;
 }
 
 /** PRD 6.3 항목 6: Journey & Attribution 요약. 상세 화면(9장)과 동일한 API를 재사용한다. */
-export default function JourneySummaryPlaceholder({ advertiserId, projectId, from, to }: JourneySummaryProps) {
+export default function JourneySummaryPlaceholder({ projectId, from, to }: JourneySummaryProps) {
   const router = useRouter();
   const [result, setResult] = useState<JourneyAnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +33,7 @@ export default function JourneySummaryPlaceholder({ advertiserId, projectId, fro
   }, [projectId, from, to]);
 
   const handleNavigate = () => {
-    const query = new URLSearchParams({ advertiserId, projectId: String(projectId), from, to });
+    const query = new URLSearchParams({ projectId: String(projectId), from, to });
     router.push(`/journey?${query.toString()}`);
   };
 

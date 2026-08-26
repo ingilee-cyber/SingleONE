@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import JourneyPage from "./page";
 import * as journeyApi from "@/lib/journeyApi";
 import * as projectApi from "@/lib/projectApi";
+import { useAdvertiserStore } from "@/lib/advertiserStore";
 import type { JourneyAnalysisResult } from "@/lib/journeyApi";
 
 const mockSearchParams = vi.fn(() => new URLSearchParams());
@@ -47,8 +48,15 @@ const result: JourneyAnalysisResult = {
 describe("JourneyPage", () => {
   beforeEach(() => {
     mockSearchParams.mockReturnValue(
-      new URLSearchParams({ advertiserId: "adv-1", projectId: "1", from: "2026-07-01", to: "2026-07-07" }),
+      new URLSearchParams({ projectId: "1", from: "2026-07-01", to: "2026-07-07" }),
     );
+    useAdvertiserStore.setState({
+      advertisers: [{ advertiserId: "adv-1", advertiserName: "adv-1" }],
+      selectedAdvertiserId: "adv-1",
+      loading: false,
+      error: null,
+      loaded: true,
+    });
     vi.mocked(projectApi.listProjects).mockResolvedValue([project]);
     vi.mocked(journeyApi.getJourneyAnalysis).mockResolvedValue(result);
   });

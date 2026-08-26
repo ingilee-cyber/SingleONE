@@ -21,7 +21,6 @@ const result: SimulationResult = {
 
 function resetStore() {
   useSimulationStore.setState({
-    advertiserId: "",
     projectId: "",
     baseFrom: "",
     baseTo: "",
@@ -40,14 +39,12 @@ describe("useSimulationStore", () => {
     vi.clearAllMocks();
   });
 
-  it("clears the project selection and any prior result when the advertiser changes", () => {
-    useSimulationStore.getState().setProjectId(5);
+  it("clears any prior result when the project selection changes", () => {
     useSimulationStore.setState({ result });
 
-    useSimulationStore.getState().setAdvertiserId("adv-2");
+    useSimulationStore.getState().setProjectId(5);
 
-    expect(useSimulationStore.getState().advertiserId).toBe("adv-2");
-    expect(useSimulationStore.getState().projectId).toBe("");
+    expect(useSimulationStore.getState().projectId).toBe(5);
     expect(useSimulationStore.getState().result).toBeNull();
   });
 

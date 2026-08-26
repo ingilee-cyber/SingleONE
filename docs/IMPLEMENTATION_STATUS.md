@@ -246,6 +246,25 @@
   1. AppShell 로고 옆 "SingleONE" 글자가 MUI `subtitle1`의 기본 HTML 태그(`<h6>`)로 렌더링되어, 홈 화면의 실제 제목(`<h1>SingleONE</h1>`)과 이름이 같은 heading이 2개가 되는 문제 — `component="span"`으로 수정.
   2. 위 문제의 연장선으로, 사이드바의 "Dashboard" 메뉴와 상세 화면 Breadcrumb의 "Dashboard" 링크 이름이 같아 자동 테스트(및 접근성 도구)가 어떤 링크인지 구분하지 못하던 문제 — 사이드바 라벨을 "대시보드"로 변경해 해결.
 
+## 11. 전역 광고주 선택 + Dashboard 정보 구조 최적화
+
+- 상태: 완료
+- 기존 기능 추가가 아니라, 화면마다 따로 관리하던 "광고주 ID" 입력을 상단 Global Header 하나로 통합하고, Dashboard의 정보 밀도를 대형 모니터 시연에 맞게 재구성한 단계다. SingleONE 계산 로직·API 계약·DB 구조·Journey/Simulation 계산식은 전혀 바꾸지 않았다.
+- 계획 승인 전 두 가지 지점에서 PRD/기존 기능과의 충돌을 확인하고 사용자에게 직접 확인함:
+  1. PRD 4.1(메인 내비게이션)과 6.3/9.1~9.2는 Journey & Attribution을 별도 메인 메뉴/독립 화면으로 명시한다. 사용자가 애초에 요청한 "Dashboard에 완전 통합"은 이 PRD 내용과 상충해, **메인 메뉴/독립 `/journey` 페이지는 그대로 유지**하고 Dashboard의 기존 "Journey & Attribution 요약" 위젯만 레이아웃상 더 눈에 띄게(매체별 Index 차트와 좌우 배치) 재배치하는 것으로 범위를 조정하기로 확인받음. `/journey` route·메인 메뉴 항목·Journey 계산 로직은 전혀 손대지 않았다.
+  2. 데이터 관리(업로드) 화면은 신규 광고주가 시스템에 처음 등록되는 유일한 경로(업로드 성공 시 Advertiser Master Upsert로 자동 생성)라, 전역 드롭다운(기존 데이터가 있는 광고주만 표시)만 남기면 UI로 신규 광고주를 등록할 방법이 없어진다는 점을 확인받아, **데이터 관리 화면만 예외로 자체 광고주 ID 입력을 그대로 유지**하기로 확정.
+- 생성물:
+  - Backend: 신규 `com.singleone.backend.advertiser` 패키지 — `AdvertiserController`(`GET /api/v1/advertisers`, 기존 `AdvertiserRepository.findAll()`만 재사용하는 최소 컨트롤러, 별도 Service/Exception 불필요), `AdvertiserResponse` record. 성과 업로드 SUCCESS 시 Master Upsert가 이미 Advertiser 행을 항상 만들어두므로(Stage 1/2) 이 엔드포인트가 곧 "실제 데이터가 있는 광고주 목록"이다.
+  - Frontend 전역 상태: 신규 `frontend/lib/advertiserApi.ts`, `frontend/lib/advertiserStore.ts`(Zustand, `simulationStore.ts`와 동일하게 persist 미들웨어 없음 — 목록 로드 후 선택값이 없거나 더 이상 존재하지 않으면 첫 번째 광고주를 자동 선택), 신규 `frontend/app/components/common/AdvertiserSelector.tsx`(MUI Autocomplete, Loading/Empty/Error 처리)를 `AppShell.tsx` 상단 바 우측에 배치. 상세 화면(매체/캠페인/광고그룹/광고) 체류 중 광고주가 바뀌면 해당 데이터가 새 광고주에 존재하지 않을 게 확실하므로 Dashboard로 자동 이동시키는 효과를 `AppShell`에 추가.
+  - Frontend 페이지별 정리: `dashboard/page.tsx`, `journey/page.tsx`, `projects/page.tsx`, `simulation/page.tsx`(+`simulationStore.ts`에서 `advertiserId` 필드 제거)의 자체 "광고주 ID" TextField와 로컬/URL 기반 상태를 제거하고 전역 store를 참조하도록 교체. 기존에 이미 있던 "광고주 변경 시 프로젝트 재조회 + 무효 선택 해제"(PRD 6.1) `useEffect`는 의존값 출처만 바뀌었을 뿐 로직은 그대로 재사용. 매체/캠페인/광고그룹/광고 상세 4개 페이지의 `carryOverQuery()`에서도 이제 불필요해진 `advertiserId` 파라미터를 제거.
+  - Dashboard 레이아웃 최적화(대형 모니터): `Container maxWidth`를 `lg`→`xl`로 확대. "매체별 SingleONE Index" 차트와 "Journey & Attribution 요약"(기존 `JourneySummaryPlaceholder`, 내용/계산 변경 없음)을 2열 그리드로 좌우 배치, "SingleONE Index 구성요소 Breakdown"과 "7일 Rolling SingleONE Index"도 2열 그리드로 좌우 배치. 1920×1080 기준 스크린샷으로 확인한 결과 이전보다 스크롤이 크게 줄었다(표+두 차트 Row까지 한 화면에 거의 다 들어옴).
+- 테스트 결과:
+  - Backend: 신규 `AdvertiserControllerTest`(Mockito 기반, Docker 불필요) 포함 `./gradlew test` 61개 중 50개 자동 통과, 11개는 1단계부터 동일하게 기록된 Testcontainers/Docker Desktop 환경 제약(신규 실패 없음, 기존 문서화된 것과 정확히 같은 11개 테스트). `bootRun` + curl로 `GET /api/v1/advertisers` 실제 응답 확인.
+  - Frontend: 기존 `dashboard/page.test.tsx`/`journey/page.test.tsx`/`projects/page.test.tsx`/`simulation/page.test.tsx`/`simulationStore.test.ts`/`dashboard/media/[media]/page.test.tsx`의 광고주 텍스트박스 기반 테스트를 전역 store를 직접 `setState`하는 방식으로 교체(기존 `simulationStore`를 테스트에서 직접 `setState`하던 패턴 재사용). 신규 `lib/advertiserStore.test.ts`, `app/components/common/AdvertiserSelector.test.tsx` 추가. `npm test`(`--no-file-parallelism`) 70개 전부 통과(1회는 자원 경합으로 인한 재현 가능한 flake, 단독 실행 시 항상 통과 — 이미 여러 단계에서 반복 확인된 이 PC의 환경적 지연이며 코드 결함 아님). `npm run build`(타입체크 포함) 성공.
+  - Playwright E2E: `dashboard-and-detail.spec.ts`/`journey.spec.ts`/`simulation.spec.ts`의 광고주 텍스트박스 입력 단계를 신규 헬퍼 `selectAdvertiser()`(헤더 Autocomplete를 열고 방금 만든 advertiserId로 필터해 옵션 클릭)로 교체. `upload-lifecycle.spec.ts`는 데이터 관리 화면 자체 입력을 그대로 쓰므로 변경 없음. `npx playwright test --workers=1` 실행 결과는 아래에 기록.
+  - 실제 Backend+Frontend+데모 데이터(`abc-brand`)로 광고주를 바꾸면 Dashboard/프로젝트/Simulation이 즉시 새 데이터로 갱신되는 것, 매체 상세 화면 체류 중 광고주를 바꾸면 Dashboard로 자동 이동하는 것, 데이터 관리 화면에는 광고주 ID 입력이 그대로 남아있는 것을 브라우저로 직접 확인.
+- 진행 중 발견해 고친 점: 없음(디자인 개선 단계인 Stage 10에서 이미 정리된 공통 컴포넌트/테마를 그대로 재사용했고, 새로 발견된 버그는 없었다).
+
 ---
 
 ## Acceptance Criteria 커버리지 (AC-01 ~ AC-55)

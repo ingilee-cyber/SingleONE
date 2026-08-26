@@ -7,7 +7,6 @@ import type { Media } from "@/lib/projectApi";
  * 메모리(Zustand)에만 둔다. persist 미들웨어를 쓰지 않으므로 새로고침하면 그대로 초기화된다.
  */
 interface SimulationState {
-  advertiserId: string;
   projectId: number | "";
   baseFrom: string;
   baseTo: string;
@@ -17,7 +16,6 @@ interface SimulationState {
   result: SimulationResult | null;
   loading: boolean;
   error: string | null;
-  setAdvertiserId: (value: string) => void;
   setProjectId: (value: number | "") => void;
   setBaseFrom: (value: string) => void;
   setBaseTo: (value: string) => void;
@@ -28,7 +26,6 @@ interface SimulationState {
 }
 
 export const useSimulationStore = create<SimulationState>((set, get) => ({
-  advertiserId: "",
   projectId: "",
   baseFrom: "",
   baseTo: "",
@@ -39,7 +36,6 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   loading: false,
   error: null,
 
-  setAdvertiserId: (value) => set({ advertiserId: value, projectId: "", mediaBudgets: {}, result: null }),
   setProjectId: (value) => set({ projectId: value, mediaBudgets: {}, result: null }),
   setBaseFrom: (value) => set({ baseFrom: value }),
   setBaseTo: (value) => set({ baseTo: value }),

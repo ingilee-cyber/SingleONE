@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import DashboardPage from "./page";
 import * as dashboardApi from "@/lib/dashboardApi";
 import * as projectApi from "@/lib/projectApi";
+import { useAdvertiserStore } from "@/lib/advertiserStore";
 
 const push = vi.fn();
 const mockSearchParams = vi.fn(() => new URLSearchParams());
@@ -92,18 +93,25 @@ describe("DashboardPage", () => {
     window.localStorage.clear();
     push.mockClear();
     mockSearchParams.mockReturnValue(new URLSearchParams());
+    useAdvertiserStore.setState({
+      advertisers: [{ advertiserId: "adv-1", advertiserName: "adv-1" }],
+      selectedAdvertiserId: "adv-1",
+      loading: false,
+      error: null,
+      loaded: true,
+    });
     vi.mocked(projectApi.listProjects).mockResolvedValue([project]);
     vi.mocked(dashboardApi.getDashboard).mockResolvedValue(dashboardResponse);
   });
 
-  it("shows a prompt until an advertiser id is entered", () => {
+  it("shows a prompt when no advertiser is registered", () => {
+    useAdvertiserStore.setState({ advertisers: [], selectedAdvertiserId: "", loaded: true });
     render(<DashboardPage />);
-    expect(screen.getByText("광고주 ID를 입력하세요.")).toBeInTheDocument();
+    expect(screen.getByText("등록된 광고주가 없습니다. 데이터 관리에서 먼저 데이터를 업로드하세요.")).toBeInTheDocument();
   });
 
   it("loads the project, fetches the dashboard, and renders KPI cards and the performance table", async () => {
     render(<DashboardPage />);
-    fireEvent.change(screen.getByRole("textbox", { name: "광고주 ID" }), { target: { value: "adv-1" } });
 
     await waitFor(() => {
       expect(dashboardApi.getDashboard).toHaveBeenCalledWith(1, expect.any(String), expect.any(String));
@@ -117,7 +125,6 @@ describe("DashboardPage", () => {
   it("shows an error alert when the dashboard request fails", async () => {
     vi.mocked(dashboardApi.getDashboard).mockRejectedValue(new Error("network error"));
     render(<DashboardPage />);
-    fireEvent.change(screen.getByRole("textbox", { name: "광고주 ID" }), { target: { value: "adv-1" } });
 
     expect(await screen.findByText("Dashboard 데이터를 불러오지 못했습니다.")).toBeInTheDocument();
   });
@@ -125,14 +132,12 @@ describe("DashboardPage", () => {
   it("shows a warning when the selected project has no campaigns", async () => {
     vi.mocked(projectApi.listProjects).mockResolvedValue([emptyProject]);
     render(<DashboardPage />);
-    fireEvent.change(screen.getByRole("textbox", { name: "광고주 ID" }), { target: { value: "adv-1" } });
 
     expect(await screen.findByText("선택한 프로젝트에 포함된 캠페인이 없습니다.")).toBeInTheDocument();
   });
 
   it("hides a KPI card when toggled off and persists the choice to localStorage", async () => {
     render(<DashboardPage />);
-    fireEvent.change(screen.getByRole("textbox", { name: "광고주 ID" }), { target: { value: "adv-1" } });
     await screen.findByText("5,000,000");
 
     const kpiCards = screen.getByTestId("kpi-cards");
@@ -150,7 +155,6 @@ describe("DashboardPage", () => {
 
   it("navigates to the media detail stub with the current filter context on media click", async () => {
     render(<DashboardPage />);
-    fireEvent.change(screen.getByRole("textbox", { name: "광고주 ID" }), { target: { value: "adv-1" } });
     await screen.findByText("5,000,000");
 
     fireEvent.click(screen.getAllByRole("button", { name: "echart-stub" })[0]);
@@ -158,16 +162,15 @@ describe("DashboardPage", () => {
     expect(push).toHaveBeenCalledTimes(1);
     const url = push.mock.calls[0][0] as string;
     expect(url).toContain("/dashboard/media/GOOGLE?");
-    expect(url).toContain("advertiserId=adv-1");
     expect(url).toContain("projectId=1");
     expect(url).toContain("comparePrevious=true");
   });
 
-  // AC-23: 상세 화면에서 Breadcrumb으로 돌아왔을 때 필터 상태가 유지되어야 한다.
-  it("restores advertiser/project/period/comparePrevious from the URL when returning via breadcrumb", async () => {
+  // AC-23: 상세 화면에서 Breadcrumb으로 돌아왔을 때 프로젝트/기간/이전 기간 비교 상태가
+  // 유지되어야 한다(광고주는 전역 Header 선택값이 Source of Truth라 URL로 복원하지 않는다).
+  it("restores project/period/comparePrevious from the URL when returning via breadcrumb", async () => {
     mockSearchParams.mockReturnValue(
       new URLSearchParams({
-        advertiserId: "adv-1",
         projectId: "1",
         from: "2026-06-08",
         to: "2026-06-14",
@@ -180,7 +183,6 @@ describe("DashboardPage", () => {
     await waitFor(() => {
       expect(dashboardApi.getDashboard).toHaveBeenCalledWith(1, "2026-06-08", "2026-06-14");
     });
-    expect(screen.getByRole("textbox", { name: "광고주 ID" })).toHaveValue("adv-1");
     expect(screen.getByRole("button", { name: "직접 설정" })).toHaveAttribute("aria-pressed", "true");
     expect(await screen.findByText("5,000,000")).toBeInTheDocument();
   });
@@ -198,7 +200,6 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("button", { name: "최근 30일" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("switch", { name: "이전 기간 비교" })).toBeChecked();
 
-    fireEvent.change(screen.getByRole("textbox", { name: "광고주 ID" }), { target: { value: "adv-1" } });
     await waitFor(() => {
       expect(dashboardApi.getDashboard).toHaveBeenCalledWith(1, format(fromDate), format(toDate));
     });
@@ -216,7 +217,6 @@ describe("DashboardPage", () => {
     });
 
     render(<DashboardPage />);
-    fireEvent.change(screen.getByRole("textbox", { name: "광고주 ID" }), { target: { value: "adv-1" } });
 
     expect(await screen.findByText("데이터 부족")).toBeInTheDocument();
     expect(screen.getByText("필수 데이터 누락")).toBeInTheDocument();

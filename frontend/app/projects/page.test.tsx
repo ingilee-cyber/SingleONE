@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ProjectsPage from "./page";
 import * as projectApi from "@/lib/projectApi";
+import { useAdvertiserStore } from "@/lib/advertiserStore";
 
 vi.mock("@/lib/projectApi", async () => {
   const actual = await vi.importActual<typeof import("@/lib/projectApi")>("@/lib/projectApi");
@@ -44,12 +45,18 @@ const campaignOptions: projectApi.CampaignOption[] = [
 
 async function selectAdvertiser() {
   render(<ProjectsPage />);
-  fireEvent.change(screen.getByRole("textbox", { name: "광고주 ID" }), { target: { value: "adv-1" } });
   await screen.findByText("메타구글비교");
 }
 
 describe("ProjectsPage", () => {
   beforeEach(() => {
+    useAdvertiserStore.setState({
+      advertisers: [{ advertiserId: "adv-1", advertiserName: "adv-1" }],
+      selectedAdvertiserId: "adv-1",
+      loading: false,
+      error: null,
+      loaded: true,
+    });
     vi.mocked(projectApi.listProjects).mockResolvedValue([normalProject, defaultProject]);
     vi.mocked(projectApi.searchCampaigns).mockResolvedValue(campaignOptions);
     vi.mocked(projectApi.createProject).mockResolvedValue(normalProject);

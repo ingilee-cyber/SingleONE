@@ -18,6 +18,7 @@ import {
 import { listProjects, type Project } from "@/lib/projectApi";
 import { PERIOD_OPTIONS, computeRange, toISODate, type PeriodPreset } from "@/lib/period";
 import { getJourneyAnalysis, type JourneyAnalysisResult } from "@/lib/journeyApi";
+import { useAdvertiserStore } from "@/lib/advertiserStore";
 import PageHeader from "@/app/components/common/PageHeader";
 import FilterPanel from "@/app/components/common/FilterPanel";
 import SectionCard from "@/app/components/common/SectionCard";
@@ -37,7 +38,7 @@ export default function JourneyPage() {
 function JourneyPageContent() {
   const initialParams = useSearchParams();
 
-  const [advertiserId, setAdvertiserId] = useState(() => initialParams.get("advertiserId") ?? "");
+  const advertiserId = useAdvertiserStore((s) => s.selectedAdvertiserId);
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<number | "">(() => {
     const raw = initialParams.get("projectId");
@@ -99,13 +100,6 @@ function JourneyPageContent() {
           <FilterPanel>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
               <TextField
-                label="광고주 ID"
-                value={advertiserId}
-                onChange={(e) => setAdvertiserId(e.target.value)}
-                size="small"
-                fullWidth
-              />
-              <TextField
                 select
                 label="프로젝트"
                 value={selectedProjectId}
@@ -157,7 +151,7 @@ function JourneyPageContent() {
             {projectsError && <Alert severity="error">{projectsError}</Alert>}
           </FilterPanel>
 
-          {!advertiserId && <Alert severity="info">광고주 ID를 입력하세요.</Alert>}
+          {!advertiserId && <Alert severity="info">등록된 광고주가 없습니다. 데이터 관리에서 먼저 데이터를 업로드하세요.</Alert>}
           {advertiserId && projects.length === 0 && !projectsError && (
             <Alert severity="info">이 광고주에는 아직 프로젝트가 없습니다.</Alert>
           )}

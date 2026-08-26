@@ -30,7 +30,7 @@ describe("JourneySummaryPlaceholder", () => {
 
   it("shows the top path/channel/pair and navigates to /journey with the current filter context", async () => {
     vi.mocked(journeyApi.getJourneyAnalysis).mockResolvedValue(result);
-    render(<JourneySummaryPlaceholder advertiserId="adv-1" projectId={1} from="2026-07-01" to="2026-07-07" />);
+    render(<JourneySummaryPlaceholder projectId={1} from="2026-07-01" to="2026-07-07" />);
 
     expect(await screen.findByText(/META → GOOGLE → 구매/)).toBeInTheDocument();
     expect(screen.getByText(/GOOGLE \(기여 구매 2건\)/)).toBeInTheDocument();
@@ -40,7 +40,6 @@ describe("JourneySummaryPlaceholder", () => {
     expect(push).toHaveBeenCalledTimes(1);
     const url = push.mock.calls[0][0] as string;
     expect(url).toContain("/journey?");
-    expect(url).toContain("advertiserId=adv-1");
     expect(url).toContain("projectId=1");
   });
 
@@ -52,14 +51,14 @@ describe("JourneySummaryPlaceholder", () => {
       channelPairs: [],
       attributedJourneyCount: 0,
     });
-    render(<JourneySummaryPlaceholder advertiserId="adv-1" projectId={1} from="2026-07-01" to="2026-07-07" />);
+    render(<JourneySummaryPlaceholder projectId={1} from="2026-07-01" to="2026-07-07" />);
 
     expect(await screen.findByText("선택한 기간에 분석 가능한 Journey 이벤트가 없습니다.")).toBeInTheDocument();
   });
 
   it("shows an error alert when the request fails", async () => {
     vi.mocked(journeyApi.getJourneyAnalysis).mockRejectedValue(new Error("fail"));
-    render(<JourneySummaryPlaceholder advertiserId="adv-1" projectId={1} from="2026-07-01" to="2026-07-07" />);
+    render(<JourneySummaryPlaceholder projectId={1} from="2026-07-01" to="2026-07-07" />);
 
     expect(await screen.findByText("Journey 데이터를 불러오지 못했습니다.")).toBeInTheDocument();
   });

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { buildPerformanceCsv, createProject, uploadPerformanceCsv, waitForUploadStatus } from "./testData";
+import { buildPerformanceCsv, createProject, selectAdvertiser, uploadPerformanceCsv, waitForUploadStatus } from "./testData";
 
 /**
  * PRD 10장 골든 패스: 8주치 성과 업로드 -> 프로젝트 생성 -> 시뮬레이션 실행.
@@ -47,7 +47,7 @@ test.describe("Media Planning Simulation 골든 패스", () => {
     const forbidden = /추천 예산|증액 추천|감액 추천|최적 예산|구매 최대화|매출 최대화/;
     expect(await page.getByText(forbidden).count()).toBe(0);
 
-    await page.getByRole("textbox", { name: "광고주 ID" }).fill(advertiserId);
+    await selectAdvertiser(page, advertiserId);
     await page.getByLabel("META").waitFor({ timeout: 20000 });
 
     const baseToStr = baseTo.toISOString().slice(0, 10);
@@ -68,9 +68,14 @@ test.describe("Media Planning Simulation 골든 패스", () => {
     // AC-43: 결과가 채워진 뒤(백엔드 notes 등 자유 텍스트 포함)에도 금지 표현이 없어야 한다.
     expect(await page.getByText(forbidden).count()).toBe(0);
 
-    // AC-53: 새로고침하면 입력값이 전부 초기화돼야 한다(DB/LocalStorage 저장 금지).
+    // AC-53: 새로고침하면 Simulation 입력값(프로젝트/예산/결과)이 전부 초기화돼야 한다
+    // (DB/LocalStorage 저장 금지). 광고주는 전역 상태라 같은 광고주를 다시 선택해, 이번에는
+    // Simulation 자체의 상태만 비어 있는지 확인한다.
     await page.reload();
     await page.getByRole("heading", { name: "Media Planning Simulation" }).waitFor({ timeout: 45000 });
-    await expect(page.getByRole("textbox", { name: "광고주 ID" })).toHaveValue("");
+    await selectAdvertiser(page, advertiserId);
+    await page.getByLabel("META").waitFor({ timeout: 20000 });
+    await expect(page.getByLabel("META")).toHaveValue("");
+    expect(await page.getByText(/높음|보통|낮음|예측 불가/).count()).toBe(0);
   });
 });

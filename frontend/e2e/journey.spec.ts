@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { createProject, uploadJourneyCsv, waitForUploadStatus } from "./testData";
+import { createProject, selectAdvertiser, uploadJourneyCsv, waitForUploadStatus } from "./testData";
 
 /**
  * PRD 9장 Golden Journey Dataset(15.4) 골든 패스 + AC-42(금지 표현)/9.7 중립 표현 확인.
@@ -59,9 +59,10 @@ test.describe("Journey & Attribution 골든 패스", () => {
     expect(projectId).toBeGreaterThan(0);
 
     const query = new URLSearchParams({
-      advertiserId, projectId: String(projectId), from: "2026-07-01", to: "2026-07-10",
+      projectId: String(projectId), from: "2026-07-01", to: "2026-07-10",
     }).toString();
     await page.goto(`/journey?${query}`, { timeout: 60000 });
+    await selectAdvertiser(page, advertiserId);
     await page.getByRole("heading", { name: "Journey & Attribution" }).waitFor({ timeout: 45000 });
     await page.locator("canvas, svg").first().waitFor({ timeout: 45000 });
 

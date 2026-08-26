@@ -37,6 +37,7 @@ import {
   type Project,
 } from "@/lib/projectApi";
 import { mediaColor } from "@/lib/mediaColors";
+import { useAdvertiserStore } from "@/lib/advertiserStore";
 import PageHeader from "@/app/components/common/PageHeader";
 import FilterPanel from "@/app/components/common/FilterPanel";
 import SectionCard from "@/app/components/common/SectionCard";
@@ -48,7 +49,7 @@ function selectionKey(media: Media, campaignId: string) {
 }
 
 export default function ProjectsPage() {
-  const [advertiserId, setAdvertiserId] = useState("");
+  const advertiserId = useAdvertiserStore((s) => s.selectedAdvertiserId);
   const [search, setSearch] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [listError, setListError] = useState<string | null>(null);
@@ -167,13 +168,6 @@ export default function ProjectsPage() {
 
           <FilterPanel>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <TextField
-                label="광고주 ID"
-                value={advertiserId}
-                onChange={(e) => setAdvertiserId(e.target.value)}
-                size="small"
-                fullWidth
-              />
               <TextField
                 label="프로젝트명 검색"
                 value={search}

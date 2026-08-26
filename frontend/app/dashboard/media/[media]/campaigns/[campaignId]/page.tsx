@@ -20,7 +20,6 @@ export default function CampaignDetailPage() {
   const media = params.media as Media;
   const campaignId = decodeURIComponent(params.campaignId);
 
-  const advertiserId = searchParams.get("advertiserId") ?? "";
   const projectId = Number(searchParams.get("projectId"));
   const from = searchParams.get("from") ?? "";
   const to = searchParams.get("to") ?? "";
@@ -46,10 +45,10 @@ export default function CampaignDetailPage() {
 
   const carryOverQuery = useCallback(
     (extra: Record<string, string>) => {
-      const query = new URLSearchParams({ advertiserId, projectId: String(projectId), from, to, comparePrevious: String(comparePrevious), ...extra });
+      const query = new URLSearchParams({ projectId: String(projectId), from, to, comparePrevious: String(comparePrevious), ...extra });
       return query.toString();
     },
-    [advertiserId, projectId, from, to, comparePrevious],
+    [projectId, from, to, comparePrevious],
   );
 
   const handleAdGroupClick = (row: EntityPerformance) => {

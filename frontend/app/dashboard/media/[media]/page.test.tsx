@@ -81,7 +81,6 @@ describe("MediaDetailPage", () => {
     expect(push).toHaveBeenCalledTimes(1);
     const url = push.mock.calls[0][0] as string;
     expect(url).toContain("/dashboard/media/GOOGLE/campaigns/camp-google?");
-    expect(url).toContain("advertiserId=adv-1");
     expect(url).toContain("projectId=1");
   });
 
