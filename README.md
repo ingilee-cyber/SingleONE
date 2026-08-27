@@ -18,6 +18,30 @@
 
 ## 1. 프로그램을 켜는 순서
 
+### 방법 A. Docker Compose로 한 번에 실행 (추천)
+
+Docker Desktop만 켜져 있으면, MySQL/ClickHouse/Backend/Frontend를 명령어 한 줄로 전부 띄울 수 있습니다.
+
+```powershell
+cd "C:\Users\ingi.lee\Desktop\A1mediagroup\회사 자료\9996. 해커톤\SingleONE"
+docker compose --env-file .env up -d --build
+docker compose ps
+```
+
+4개 컨테이너(`singleone-mysql`, `singleone-clickhouse`, `singleone-backend`, `singleone-frontend`)가 모두 `Up`(mysql/clickhouse/backend는 `healthy`까지) 상태면 성공입니다. **http://localhost:3000** 으로 접속하세요.
+
+> `.env` 파일이 없다는 오류가 나면, 같은 폴더의 `.env.example` 파일을 복사해 `.env`로 저장하세요.
+> 이미 8080/3000 포트를 다른 프로세스(직접 켜둔 `gradlew bootRun`/`npm run dev` 등)가 쓰고 있으면 "port is not available" 오류가 납니다 — 아래 5번 오류 표를 참고해 해당 프로세스를 먼저 종료하세요.
+> 코드를 수정하며 즉시 반영(hot reload)되는 개발 환경이 필요하면 아래 "방법 B"를 대신 쓰세요. 이 방법은 이미지 빌드본을 그대로 실행하는 방식이라 코드를 고쳐도 재빌드(`--build`) 전까지는 반영되지 않습니다.
+
+끌 때는 아래처럼 하면 됩니다(데이터는 유지됨).
+```powershell
+docker compose stop
+```
+데이터까지 완전히 지우고 싶으면 `docker compose down -v`.
+
+### 방법 B. 각 프로그램을 직접 켜기 (개발용, hot reload)
+
 터미널(PowerShell) 창을 **3개** 열어서 아래 순서대로 진행하세요. 각 창은 실행한 뒤 닫지 말고 그대로 켜두어야 합니다.
 
 ### 1-0. Docker Desktop 실행 확인
@@ -81,7 +105,9 @@ npm.cmd run dev
 
 ## 3. 프로그램을 끄는 순서
 
-켤 때의 **반대 순서**로 끕니다.
+**방법 A(Docker Compose)로 켰다면** 저장소 루트에서 `docker compose stop`(컨테이너만 정지, 데이터 유지) 또는 `docker compose down`(컨테이너 삭제, 데이터는 볼륨에 유지)이면 됩니다.
+
+**방법 B(직접 실행)로 켰다면** 켤 때의 **반대 순서**로 끕니다.
 
 1. 터미널 3(Frontend) 창에서 `Ctrl + C`를 눌러 종료합니다.
 2. 터미널 2(Backend) 창에서 `Ctrl + C`를 눌러 종료합니다.
@@ -91,6 +117,8 @@ npm.cmd run dev
    docker compose --env-file ../.env -f docker-compose.yml stop
    ```
    (`stop`은 데이터를 지우지 않고 컨테이너만 멈춥니다. 다음에 켤 때는 `docker compose ... up -d`만 다시 실행하면 됩니다.)
+
+> 두 방법의 MySQL/ClickHouse는 서로 다른 데이터 볼륨을 씁니다(Docker Compose는 실행한 폴더 이름으로 프로젝트를 구분합니다). 방법 A와 방법 B를 번갈아 쓰면 넣어둔 데이터가 안 보일 수 있으니, 한 번에 하나의 방법만 쓰는 것을 권장합니다.
 
 ---
 
@@ -118,6 +146,18 @@ npm.cmd run dev
 
 `/uploads` 화면에서 광고주 ID를 입력하고 직접 준비한 CSV(또는 XLSX) 파일을 업로드하면 됩니다. 파일에 꼭 들어가야 하는 열(컬럼) 이름은 `test-data/demo_performance.csv`(성과 데이터)와 `test-data/demo_journey.csv`(Journey 데이터)의 첫 줄을 열어보면 확인할 수 있습니다.
 
+### 방법 C. 종합 데모 데이터셋(광고주 3개, 시연용)
+
+여러 매체/Edge Case를 골고루 보여주는 광고주 3개짜리 데이터셋이 `test-data/demo-full/`에 준비돼 있습니다. Backend가 켜진 상태에서:
+
+```powershell
+cd "C:\Users\ingi.lee\Desktop\A1mediagroup\회사 자료\9996. 해커톤\SingleONE\test-data\generator"
+npm install
+npm run seed
+```
+
+자세한 내용은 `test-data/demo-full/README.md`와 `EXPECTED_BEHAVIOR.md`를 참고하세요.
+
 ---
 
 ## 5. 자주 발생할 수 있는 오류
@@ -125,6 +165,7 @@ npm.cmd run dev
 | 증상 | 원인 | 해결 방법 |
 |---|---|---|
 | `docker compose` 실행 시 "Docker daemon을 찾을 수 없다"는 오류 | Docker Desktop 앱이 꺼져 있음 | Docker Desktop 앱을 실행하고 30초~1분 기다린 뒤 다시 시도 |
+| `docker compose up` 시 "port is not available"/"Only one usage of each socket address" 오류 | 8080(Backend) 또는 3000(Frontend) 포트를 다른 프로세스가 이미 쓰고 있음(대부분 직접 켜둔 `gradlew bootRun`/`npm run dev`가 안 꺼진 경우) | PowerShell에서 `Get-NetTCPConnection -LocalPort 8080,3000 \| Select OwningProcess`로 점유 프로세스를 찾아 `Stop-Process -Id <PID> -Force`로 종료한 뒤 `docker compose up -d` 재시도 |
 | `cd` 명령에서 "경로가 존재하지 않는다"는 오류 | 폴더 이름만 입력(`cd SingleONE`)해서 발생. PowerShell은 기본적으로 `C:\WINDOWS\system32`에서 시작함 | 이 문서에 적힌 것처럼 **전체 경로**를 큰따옴표로 감싸서 입력 |
 | `npm run dev` 실행 시 "이 시스템에서 스크립트를 실행할 수 없다"는 보안 오류(PSSecurityException) | Windows PowerShell의 기본 보안 정책 때문(코드 문제 아님) | `npm run dev` 대신 **`npm.cmd run dev`**로 실행 |
 | Backend 실행 시 MySQL 접속 실패(Access denied) 오류 | PowerShell은 `.env` 파일을 자동으로 읽지 않음 | 이미 `backend/build.gradle`에 `.env`를 자동으로 읽어오도록 조치돼 있어 보통 발생하지 않지만, 계속되면 `.env` 파일의 `MYSQL_PASSWORD` 값과 Docker 컨테이너가 실제로 쓰는 값이 같은지 확인 |

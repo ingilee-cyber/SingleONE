@@ -267,6 +267,19 @@
 
 ---
 
+## 12. Docker Compose 전체 스택 One-shot 구성
+
+- 상태: 완료
+- 새 기능이 아니라, 지금까지 Docker(MySQL/ClickHouse)만 컴포즈하고 Backend/Frontend는 `gradlew bootRun`/`npm run dev`로 따로 켜던 방식에 더해, 명령 한 줄(`docker compose up -d --build`)로 전체 스택을 띄울 수 있는 경로를 추가한 단계다. 기존 `infra/docker-compose.yml`과 수동 실행 워크플로우는 그대로 유지된다(hot reload가 필요한 개발 시 계속 사용 가능).
+- 생성물:
+  - `backend/Dockerfile`(멀티스테이지: `eclipse-temurin:17-jdk-jammy`로 `./gradlew bootJar -x test` 빌드 → `eclipse-temurin:17-jre-jammy` 런타임, healthcheck용 `curl`만 추가 설치), `backend/.dockerignore`.
+  - `frontend/Dockerfile`(멀티스테이지: `node:20-slim`으로 `npm ci && npm run build` → 프로덕션 의존성만 재설치한 `node:20-slim` 런타임에서 `npm run start`), `frontend/.dockerignore`. `NEXT_PUBLIC_API_BASE_URL`은 브라우저가 Backend를 직접 호출하는 구조라 빌드 인자로 받아 `next build` 시점에 그대로 번들에 포함시킨다.
+  - 루트 `docker-compose.yml`: Docker Compose `include:`로 기존 `infra/docker-compose.yml`(mysql/clickhouse)을 그대로 재사용하고, `backend`/`frontend` 서비스를 추가(설정 중복 없이 한 파일에서 합성). `backend`는 `MYSQL_HOST`/`CLICKHOUSE_HOST`를 컨테이너 네트워크 서비스명(`mysql`/`clickhouse`)으로 고정 오버라이드(`.env`의 `localhost` 값은 호스트에서 직접 실행할 때만 유효하므로), `depends_on: condition: service_healthy`로 mysql/clickhouse → backend → frontend 순으로 기동 순서를 강제.
+- 테스트 결과: 실제로 Docker Desktop을 켠 상태에서 `docker compose --env-file .env up -d --build`를 실행해 4개 컨테이너(mysql/clickhouse/backend/frontend) 전부 `healthy`/`Up`까지 확인. `curl http://localhost:8080/actuator/health` → `{"status":"UP"}`, `curl -o /dev/null -w '%{http_code}' http://localhost:3000` → `200`, `GET /api/v1/advertisers` 응답 확인까지 실제로 검증했다. 이 스택은 `infra/` 방식과 별도의 Docker Volume을 쓰므로(Compose 프로젝트명이 실행 폴더 기준으로 다름) 데이터가 서로 공유되지 않는다는 점을 README에 명시했다.
+- 진행 중 발견해 고친 점: 버그는 아니고 로컬 환경 문제 — 이전에 수동으로 켜둔 `gradlew bootRun`/`npm run dev` 프로세스가 각각 8080/3000 포트를 점유하고 있어 `docker compose up`이 "port is not available" 오류로 backend/frontend 컨테이너를 못 띄운 사례가 있었다. 해당 프로세스를 종료(사용자 확인 후 진행)하니 정상적으로 기동했다 — README 5번 오류 표에 원인/해결법을 추가했다.
+
+---
+
 ## Acceptance Criteria 커버리지 (AC-01 ~ AC-55)
 
 9단계(최종 Acceptance Test)에서 AC-01~AC-55 전체를 전수 재검증했다. **55개 전부 완료(PASS)**. AC별 검증 대상/테스트 방법/자동 테스트 파일/실제 결과/비고는 `docs/FINAL_VALIDATION_REPORT.md`에 상세히 기록돼 있다.

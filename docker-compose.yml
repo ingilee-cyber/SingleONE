@@ -1,0 +1,58 @@
+# SingleONE 전체 스택(MySQL + ClickHouse + Backend + Frontend)을 한 번에 띄운다.
+#   docker compose --env-file .env up -d --build
+# DB만 띄우고 Backend/Frontend는 gradlew/npm으로 직접 실행하는 개발 방식은 그대로
+# infra/docker-compose.yml을 쓰면 된다(이 파일은 infra/docker-compose.yml을 include해
+# mysql/clickhouse 정의를 그대로 재사용한다).
+include:
+  - infra/docker-compose.yml
+
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: singleone-backend
+    restart: unless-stopped
+    environment:
+      # 컨테이너 네트워크 안에서는 서비스 이름으로 접속해야 하므로 host는 고정한다
+      # (.env의 MYSQL_HOST/CLICKHOUSE_HOST=localhost는 gradlew bootRun처럼 호스트에서
+      # 직접 실행할 때만 쓰는 값이다).
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-singleone}
+      MYSQL_USER: ${MYSQL_USER:-singleone}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme}
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_HTTP_PORT: 8123
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-singleone}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-singleone}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-changeme}
+      SERVER_PORT: 8080
+      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:-http://localhost:3000}
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+    container_name: singleone-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
